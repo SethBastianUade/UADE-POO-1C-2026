@@ -1,0 +1,322 @@
+classDiagram
+    direction TB
+
+    %% ─── ENUMS ───────────────────────────────────────────────
+    class EstadoOC {
+        <<enumeration>>
+        BORRADOR
+        PENDIENTE_APROBACION
+        EMITIDA
+        RECIBIDA_PARCIALMENTE
+        CERRADA
+        CANCELADA
+    }
+
+    class EstadoCancelacionDocumento {
+        <<enumeration>>
+        PENDIENTE
+        PARCIALMENTE_CANCELADO
+        CANCELADO
+    }
+
+    class EstadoRegistroDocumento {
+        <<enumeration>>
+        INGRESADO
+        OBSERVADO
+        APROBADO
+    }
+
+    class CondicionImpositiva {
+        <<enumeration>>
+        RESPONSABLE_INSCRIPTO
+        MONOTRIBUTISTA
+        EXENTO
+        NO_CATEGORIZADO
+    }
+
+    class TipoImpuesto {
+        <<enumeration>>
+        IVA
+        GANANCIAS
+        IIBB
+    }
+
+    class RolUsuario {
+        <<enumeration>>
+        OPERADOR
+        SUPERVISOR
+    }
+
+    %% ─── SEGURIDAD ───────────────────────────────────────────
+    class Usuario {
+        -String nombreUsuario
+        -String passwordHash
+        -String nombre
+        -String apellido
+        -RolUsuario rol
+        -boolean activo
+        +boolean esSupervisor()
+        +boolean tienePermiso(String accion)
+    }
+
+    %% ─── RUBROS ──────────────────────────────────────────────
+    class Rubro {
+        -int idRubro
+        -String codigo
+        -String descripcion
+        -boolean activo
+        +String getCodigo()
+        +String getDescripcion()
+    }
+
+    %% ─── PROVEEDORES ─────────────────────────────────────────
+    class Proveedor {
+        -int idProveedor
+        -String cuit
+        -String razonSocial
+        -CondicionImpositiva condicionImpositiva
+        -String nroInscripcionIIBB
+        -LocalDate fechaInicioActividades
+        -double limiteDeudaAutorizado
+        -boolean activo
+        +double calcularDeudaActual()
+        +double calcularMontoComprometido(double montoNuevaOC)
+        +boolean superaLimiteCredito(double montoNuevaOC)
+        +boolean tieneExclusionVigente(TipoImpuesto tipo, LocalDate fecha)
+    }
+
+    class CertificadoExclusion {
+        -int idCertificado
+        -String numeroCertificado
+        -TipoImpuesto tipoImpuesto
+        -LocalDate fechaDesde
+        -LocalDate fechaHasta
+        +boolean estaVigente(LocalDate fecha)
+    }
+
+    %% ─── ÍTEMS (herencia) ────────────────────────────────────
+    class Item {
+        <<abstract>>
+        -int idItem
+        -String codigo
+        -String descripcion
+        -String unidadMedida
+        -double precioUnitarioBase
+        -double alicuotaIVA
+        -boolean activo
+        +abstract String getTipoItem()
+        +double calcularPrecioConIVA()
+    }
+
+    class Producto {
+        -String lote
+        -LocalDate fechaVencimiento
+        -int stockActual
+        -int stockMinimo
+        +String getTipoItem()
+        +boolean requiereReposicion()
+    }
+
+    class Servicio {
+        -String modalidadPrestacion
+        -int duracionEstimadaHoras
+        -String requisitosTecnicos
+        +String getTipoItem()
+    }
+
+    %% ─── RELACIÓN PROVEEDOR–ÍTEM (N:M con precio acordado) ──
+    class ProveedorItem {
+        -double precioAcordado
+        -LocalDate fechaAcuerdo
+        -boolean activo
+        +double getPrecioAcordado()
+    }
+
+    %% ─── ORDEN DE COMPRA ─────────────────────────────────────
+    class OrdenDeCompra {
+        -int idOC
+        -String numeroOC
+        -LocalDate fechaEmision
+        -LocalDate fechaEntregaEsperada
+        -EstadoOC estado
+        -String observaciones
+        -Usuario operadorCreador
+        -Usuario supervisorAprobador
+        +double calcularTotal()
+        +void confirmar(Usuario usuario)
+        +void aprobarSupervisor(Usuario supervisor)
+        +void cancelar(Usuario usuario)
+        +void registrarRecepcion(LineaOC linea, double cantidadRecibida)
+        +boolean estaAmparada(Item item)
+        +double getPrecioAcordadoItem(Item item)
+    }
+
+    class LineaOC {
+        -int idLineaOC
+        -int cantidad
+        -double precioUnitarioAcordado
+        -double cantidadRecibida
+        +double getSubtotal()
+        +boolean estaCompletamenteRecibida()
+    }
+
+    %% ─── DOCUMENTOS COMERCIALES (herencia) ──────────────────
+    class DocumentoComercial {
+        <<abstract>>
+        -int idDocumento
+        -String numeroDocumento
+        -LocalDate fechaEmision
+        -double importeTotal
+        -EstadoCancelacionDocumento estadoCancelacion
+        -EstadoRegistroDocumento estadoRegistro
+        -double montoPagado
+        +abstract String getTipoDocumento()
+        +double getSaldoPendiente()
+        +void aplicarPago(double monto)
+        +boolean estaCancelado()
+    }
+
+    class Factura {
+        -String cae
+        -LocalDate fechaVencimientoCAE
+        -double baseImponibleIVA
+        -double montoIVA
+        +String getTipoDocumento()
+        +boolean validarConOC(OrdenDeCompra oc)
+        +boolean validarPrecios(OrdenDeCompra oc)
+        +boolean validarCoherenciaItems(Proveedor proveedor)
+    }
+
+    class NotaDeDebito {
+        -String motivoDebito
+        -Factura facturaOrigen
+        +String getTipoDocumento()
+    }
+
+    class NotaDeCredito {
+        -String motivoCredito
+        -Factura facturaOrigen
+        +String getTipoDocumento()
+    }
+
+    %% ─── LÍNEA DE DOCUMENTO ──────────────────────────────────
+    class LineaDocumento {
+        -int idLinea
+        -int cantidad
+        -double precioUnitario
+        -double alicuotaIVA
+        +double getSubtotal()
+        +double getSubtotalConIVA()
+    }
+
+    %% ─── RETENCIONES ─────────────────────────────────────────
+    class Retencion {
+        -TipoImpuesto tipoImpuesto
+        -double baseImponible
+        -double porcentaje
+        -double montoRetenido
+        -double mniAplicado
+        +double calcularMonto()
+    }
+
+    %% ─── MEDIOS DE PAGO (herencia polimórfica) ───────────────
+    class MedioDePago {
+        <<abstract>>
+        -int idMedioPago
+        -double importe
+        +abstract String getTipo()
+        +double getImporte()
+    }
+
+    class Efectivo {
+        +String getTipo()
+    }
+
+    class TransferenciaBancaria {
+        -String nroReferencia
+        -String cuentaOrigen
+        +String getTipo()
+    }
+
+    class ChequePropio {
+        -String nroCheque
+        -String banco
+        -LocalDate fechaEmision
+        -LocalDate fechaVencimiento
+        -String firmante
+        +String getTipo()
+    }
+
+    class ChequeDeTerceros {
+        -String nroCheque
+        -String banco
+        -LocalDate fechaEmision
+        -LocalDate fechaVencimiento
+        -String firmanteOriginal
+        +String getTipo()
+    }
+
+    %% ─── ORDEN DE PAGO ───────────────────────────────────────
+    class OrdenDePago {
+        -int idOP
+        -String numeroOP
+        -LocalDate fechaEmision
+        -double totalBrutoPagado
+        -double totalRetenido
+        -double totalNetoPagar
+        -Usuario operadorCreador
+        +double calcularTotalBruto()
+        +double calcularTotalRetenido()
+        +double calcularNeto()
+        +void generarOrden()
+        +void actualizarEstadosDocumentos()
+    }
+
+    class DocumentoPago {
+        -double montoAplicado
+        +double getMontoAplicado()
+    }
+
+    %% ─── HERENCIAS ───────────────────────────────────────────
+    Item <|-- Producto
+    Item <|-- Servicio
+
+    DocumentoComercial <|-- Factura
+    DocumentoComercial <|-- NotaDeDebito
+    DocumentoComercial <|-- NotaDeCredito
+
+    MedioDePago <|-- Efectivo
+    MedioDePago <|-- TransferenciaBancaria
+    MedioDePago <|-- ChequePropio
+    MedioDePago <|-- ChequeDeTerceros
+
+    %% ─── ASOCIACIONES Y COMPOSICIONES ───────────────────────
+    Proveedor "1" *-- "0..*" CertificadoExclusion : tiene
+    Proveedor "0..*" -- "1..*" Rubro : pertenece a
+    Proveedor "1" *-- "0..*" ProveedorItem : precios acordados
+
+    ProveedorItem "0..*" --> "1" Item : referencia
+
+    Item "1" --> "1" Rubro : clasificado en
+
+    OrdenDeCompra "1" *-- "1..*" LineaOC : compuesta de
+    LineaOC "0..*" --> "1" Item : referencia
+    OrdenDeCompra "0..*" --> "1" Proveedor : dirigida a
+    OrdenDeCompra "0..*" --> "1" Usuario : creada por
+    OrdenDeCompra "0..*" --> "0..1" Usuario : aprobada por
+
+    Factura "1" *-- "1..*" LineaDocumento : contiene
+    LineaDocumento "0..*" --> "1" Item : referencia
+    NotaDeDebito "0..*" --> "1" Factura : origina en
+    NotaDeCredito "0..*" --> "1" Factura : origina en
+    DocumentoComercial "0..*" --> "1" Proveedor : emitido por
+    DocumentoComercial "0..*" --> "0..*" OrdenDeCompra : amparada por
+
+    OrdenDePago "1" *-- "1..*" DocumentoPago : cancela
+    DocumentoPago "0..*" --> "1" DocumentoComercial : aplica sobre
+    OrdenDePago "1" *-- "1..*" MedioDePago : pagado con
+    OrdenDePago "1" *-- "0..*" Retencion : calcula
+    OrdenDePago "0..*" --> "1" Proveedor : paga a
+    OrdenDePago "0..*" --> "1" Usuario : creada por
+
+    Usuario "0..*" --> "1" RolUsuario : tiene rol

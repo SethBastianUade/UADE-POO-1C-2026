@@ -1,0 +1,61 @@
+sequenceDiagram
+    autonumber
+    actor Operador
+    participant GestorFactura as :GestorFacturacion
+    participant Proveedor as :Proveedor
+    participant OC as :OrdenDeCompra
+    participant Factura as :Factura
+    actor Supervisor
+
+    Note over Operador, Factura: Inicio de Registro de Factura
+
+    Operador->>GestorFactura: registrarFactura(datos, nroOC)
+    
+    rect rgb(240, 240, 240)
+        Note right of GestorFactura: 1. Validación de Origen
+        GestorFactura->>OC: buscar(nroOC)
+        
+        alt No existe OC
+            GestorFactura-->>Supervisor: solicitarAutorizaciónExcepcion()
+            Supervisor->>GestorFactura: autorizarRegistroSinOC()
+        else OC encontrada
+            OC-->>GestorFactura: retornarInstancia()
+        end
+    end
+
+    GestorFactura->>Factura: new(datos, OC)
+    
+    rect rgb(230, 245, 255)
+        Note right of GestorFactura: 2. Control de Coherencia de Conceptos
+        Factura->>Proveedor: getRubrosAutorizados()
+        Proveedor-->>Factura: listaRubros
+        Factura->>Factura: validarItemsContraRubros(listaRubros)
+        
+        alt Conceptos No Congruentes
+            Factura-->>GestorFactura: lanzarError("Rubro no autorizado")
+            GestorFactura-->>Operador: mostrarErrorInconsistencia()
+        end
+    end
+
+    rect rgb(255, 245, 230)
+        Note right of GestorFactura: 3. Control de Precios
+        Factura->>OC: getPreciosAcordados()
+        OC-->>Factura: listaPrecios
+        Factura->>Factura: compararPrecios(listaPrecios)
+        
+        alt Precios Difieren
+            Factura->>Factura: setEstado("Observado")
+            Factura-->>GestorFactura: requiereAprobacionSupervisor = true
+        else Precios Coinciden
+            Factura->>Factura: setEstado("Aceptado")
+        end
+    end
+
+    alt Factura en estado "Observado"
+        GestorFactura->>Supervisor: notificarObservacion(facturaID)
+        Supervisor->>GestorFactura: aprobarDiferenciaPrecio()
+        GestorFactura->>Factura: setEstado("Aprobado")
+    end
+
+    GestorFactura->>Factura: guardar()
+    GestorFactura-->>Operador: confirmarRegistroExitoso()

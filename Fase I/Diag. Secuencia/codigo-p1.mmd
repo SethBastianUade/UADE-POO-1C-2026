@@ -1,0 +1,46 @@
+sequenceDiagram
+    autonumber
+    actor Operador
+    participant UI as UI / Formulario
+    participant ServicioOC as :ServicioOC
+    participant OC as :OrdenDeCompra
+    participant Util as :ValidadorCreditoUtil
+    participant Prov as :Proveedor
+    actor Supervisor
+
+    Note over Operador, Supervisor: Inicio de Creación de Orden de Compra
+
+    Operador->>UI: ingresarDatosOC(proveedor, items)
+    UI->>ServicioOC: crearOC(datos)
+    
+    ServicioOC->>OC: new(datos)
+    Note right of OC: La OC nace en estado BORRADOR
+    
+    rect rgb(240, 240, 240)
+        Note right of ServicioOC: Control de Límite de Crédito
+        
+        %% Delegación a una clase de utilidad separada
+        ServicioOC->>Util: verificarLimite(proveedor, OC.getMontoTotal())
+        
+        Util->>Prov: getDeudaActual()
+        Note over Prov: Suma de facturas y ND<br/>pendientes o parciales
+        Prov-->>Util: deudaActual
+        
+        Util->>Prov: getLimiteAutorizado()
+        Prov-->>Util: limiteAutorizado
+        
+        Note over Util: montoComprometido = deudaActual + montoOC
+        
+        alt montoComprometido <= limiteAutorizado
+            Util-->>ServicioOC: validacion = APROBADO
+            ServicioOC->>OC: setEstado(EMITIDA)
+        else montoComprometido > limiteAutorizado
+            Util-->>ServicioOC: validacion = EXCEDE_LIMITE
+            ServicioOC->>OC: setEstado(PENDIENTE_APROBACION)
+            ServicioOC-->>Supervisor: notificarRequiereAprobacion(OC)
+        end
+    end
+
+    ServicioOC->>ServicioOC: persistir(OC)
+    ServicioOC-->>UI: resultado(OC, estadoActual)
+    UI-->>Operador: mostrarConfirmacion(estadoActual)

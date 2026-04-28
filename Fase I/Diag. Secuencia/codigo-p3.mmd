@@ -1,0 +1,67 @@
+sequenceDiagram
+    actor Operador
+    participant Sistema as SistemaGestion
+    participant OP as OrdenDePago
+    participant Proveedor
+    participant CertExclusion as CertificadoExclusion
+    participant DocComercial as DocumentoComercial
+    participant DocPago as DocumentoPago
+    participant Retencion
+    participant MedioDePago
+
+    Operador->>Sistema: generarOrdenPago(proveedorId, documentosSeleccionados, mediosDePago)
+
+    Sistema->>Proveedor: calcularDeudaActual()
+    Proveedor-->>Sistema: deudaActual
+
+    loop Para cada DocumentoComercial seleccionado
+        Sistema->>DocComercial: getSaldoPendiente()
+        DocComercial-->>Sistema: saldoPendiente
+    end
+
+    Sistema->>Sistema: calcularTotalBruto(documentos)
+
+    Note over Sistema, CertExclusion: Verificación de Certificados de Exclusión
+
+    Sistema->>Proveedor: getCertificadosExclusion()
+    Proveedor-->>Sistema: listaCertificados
+
+    loop Para cada TipoImpuesto [IVA, Ganancias, IIBB]
+        Sistema->>CertExclusion: estaVigente(fechaActual)
+        alt Certificado vigente para ese impuesto
+            CertExclusion-->>Sistema: true
+            Note over Sistema: Retención omitida para ese impuesto
+        else Sin certificado o vencido
+            CertExclusion-->>Sistema: false
+            Sistema->>Retencion: new Retencion(tipoImpuesto, baseImponible, porcentaje, MNI)
+            Retencion->>Retencion: calcularMonto()
+            Retencion-->>Sistema: montoRetenido
+        end
+    end
+
+    Sistema->>Sistema: calcularTotalRetenido(retenciones)
+    Sistema->>Sistema: calcularNeto(totalBruto, totalRetenido)
+
+    Note over Sistema, OP: Creación de la Orden de Pago
+
+    Sistema->>OP: new OrdenDePago(proveedor, fecha, operador)
+    OP-->>Sistema: op
+
+    loop Para cada DocumentoComercial seleccionado
+        Sistema->>DocPago: new DocumentoPago(documento, montoAplicado)
+        DocPago-->>OP: agregado
+        OP->>DocComercial: aplicarPago(montoAplicado)
+        DocComercial->>DocComercial: actualizarEstadoCancelacion()
+    end
+
+    loop Para cada MedioDePago informado
+        Sistema->>MedioDePago: new MedioDePago(tipo, importe, datosEspecificos)
+        MedioDePago-->>OP: agregado
+    end
+
+    loop Para cada Retencion calculada
+        Retencion-->>OP: agregada
+    end
+
+    OP-->>Sistema: ordenDePagoCompleta
+    Sistema-->>Operador: OP emitida con nro. y detalle de retenciones

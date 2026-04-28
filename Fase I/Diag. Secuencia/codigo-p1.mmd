@@ -38,9 +38,13 @@ sequenceDiagram
             Util-->>ServicioOC: validacion = EXCEDE_LIMITE
             ServicioOC->>OC: setEstado(PENDIENTE_APROBACION)
             ServicioOC-->>Supervisor: notificarRequiereAprobacion(OC)
+            alt Supervisor aprueba
+                Supervisor->>OC: setEstado(EMITIDA)
+            else Supervisor cancela
+                Supervisor->>OC: setEstado(CANCELADA)
+            end
         end
     end
 
-    ServicioOC->>ServicioOC: persistir(OC)
     ServicioOC-->>UI: resultado(OC, estadoActual)
     UI-->>Operador: mostrarConfirmacion(estadoActual)

@@ -47,6 +47,30 @@ classDiagram
         SUPERVISOR
     }
 
+    %% ─── SISTEMA ───────────────────────────────────────────
+    class SistemadeGestiónIntegraldeCompras{
+        -List<OrdenDeCompra> ordenesDeCompra
+        -List<Proveedor> proveedores
+        -List<DocumentoComercial> documentosComerciales
+        -List<OrdenDePago> ordenesDePago
+        -List<Usuario> usuarios
+        -List<Item> items
+        -List<Rubro> rubros
+        +void confirmarOrden(OrdenDeCompra oc, Usuario usuario)
+        +void aprobarSupervisorOrden(OrdenDeCompra oc, Usuario supervisor)
+        +void cancelarOrden(OrdenDeCompra oc, Usuario usuario)
+        +void registrarRecepcionOC(OrdenDeCompra oc, LineaOC linea, double cantidadRecibida)
+        +boolean estaAmparadaEnOC(OrdenDeCompra oc, Item item)
+        +double obtenerPrecioAcordado(OrdenDeCompra oc, Item item)
+        +void generarOrdenPago(OrdenDePago op)
+        +void actualizarEstadosDocumentosOP(OrdenDePago op)
+        +boolean validarFacturaConOC(Factura f, OrdenDeCompra oc)
+        +boolean validarPreciosFactura(Factura f, OrdenDeCompra oc)
+        +boolean validarCoherenciaItemsFactura(Factura f, Proveedor p)
+        +boolean superaLimiteCredito(Proveedor p, double montoNuevaOC)
+        +boolean tieneExclusionVigente(Proveedor p, TipoImpuesto tipo, LocalDate fecha)
+    }
+
     %% ─── SEGURIDAD ───────────────────────────────────────────
     class Usuario {
         -String nombreUsuario
@@ -74,6 +98,10 @@ classDiagram
         -int idProveedor
         -String cuit
         -String razonSocial
+        -String nombreComercial
+        -String domicilio
+        -String teléfono
+        -String correoElectrónico
         -CondicionImpositiva condicionImpositiva
         -String nroInscripcionIIBB
         -LocalDate fechaInicioActividades
@@ -81,8 +109,6 @@ classDiagram
         -boolean activo
         +double calcularDeudaActual()
         +double calcularMontoComprometido(double montoNuevaOC)
-        +boolean superaLimiteCredito(double montoNuevaOC)
-        +boolean tieneExclusionVigente(TipoImpuesto tipo, LocalDate fecha)
     }
 
     class CertificadoExclusion {
@@ -143,12 +169,6 @@ classDiagram
         -Usuario operadorCreador
         -Usuario supervisorAprobador
         +double calcularTotal()
-        +void confirmar(Usuario usuario)
-        +void aprobarSupervisor(Usuario supervisor)
-        +void cancelar(Usuario usuario)
-        +void registrarRecepcion(LineaOC linea, double cantidadRecibida)
-        +boolean estaAmparada(Item item)
-        +double getPrecioAcordadoItem(Item item)
     }
 
     class LineaOC {
@@ -182,9 +202,7 @@ classDiagram
         -double baseImponibleIVA
         -double montoIVA
         +String getTipoDocumento()
-        +boolean validarConOC(OrdenDeCompra oc)
-        +boolean validarPrecios(OrdenDeCompra oc)
-        +boolean validarCoherenciaItems(Proveedor proveedor)
+      
     }
 
     class NotaDeDebito {
@@ -268,8 +286,6 @@ classDiagram
         +double calcularTotalBruto()
         +double calcularTotalRetenido()
         +double calcularNeto()
-        +void generarOrden()
-        +void actualizarEstadosDocumentos()
     }
 
     class DocumentoPago {
@@ -291,13 +307,21 @@ classDiagram
     MedioDePago <|-- ChequeDeTerceros
 
     %% ─── ASOCIACIONES Y COMPOSICIONES ───────────────────────
+    SistemadeGestiónIntegraldeCompras "1" *-- "0..*" Usuario
+    SistemadeGestiónIntegraldeCompras "1" *-- "0..*" Proveedor
+    SistemadeGestiónIntegraldeCompras "1" *-- "0..*" Rubro
+    SistemadeGestiónIntegraldeCompras "1" *-- "0..*" Item
+    SistemadeGestiónIntegraldeCompras "1" *-- "0..*" OrdenDeCompra
+    SistemadeGestiónIntegraldeCompras "1" *-- "0..*" DocumentoComercial
+    SistemadeGestiónIntegraldeCompras "1" *-- "0..*" OrdenDePago
+
     Proveedor "1" *-- "0..*" CertificadoExclusion : tiene
     Proveedor "0..*" -- "1..*" Rubro : pertenece a
     Proveedor "1" *-- "0..*" ProveedorItem : precios acordados
 
     ProveedorItem "0..*" --> "1" Item : referencia
 
-    Item "1" --> "1" Rubro : clasificado en
+    Item "0..*" --> "1" Rubro : clasificado en
 
     OrdenDeCompra "1" *-- "1..*" LineaOC : compuesta de
     LineaOC "0..*" --> "1" Item : referencia
@@ -320,3 +344,14 @@ classDiagram
     OrdenDePago "0..*" --> "1" Usuario : creada por
 
     Usuario "0..*" --> "1" RolUsuario : tiene rol
+
+    %% ─── DEPENDENCIA ENUMERACIÓN ───────────────────────
+    Usuario ..> RolUsuario
+    CertificadoExclusion ..> TipoImpuesto
+    Retencion ..> TipoImpuesto
+    Proveedor ..> CondicionImpositiva
+    OrdenDeCompra ..> EstadoOC
+    DocumentoComercial ..> EstadoCancelacionDocumento
+    DocumentoComercial ..> EstadoRegistroDocumento
+
+    

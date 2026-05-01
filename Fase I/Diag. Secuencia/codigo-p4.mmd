@@ -1,0 +1,83 @@
+sequenceDiagram
+    autonumber
+    actor Operador
+    participant Sistema as Sistema: SistemaGestion
+    participant OC as oc: OrdenDeCompra
+    participant Linea as linea: LineaOC
+    participant Item as i: Item
+    participant Prod as p: Producto
+
+    Operador->>Sistema: registrarRecepcionOC(nroOC, itemsRecibidos)
+    activate Sistema
+
+    Sistema->>OC: getEstado()
+    activate OC
+    OC-->>Sistema: estadoActual (ej: EMITIDA)
+    deactivate OC
+
+    Note over Sistema, OC: Solo se pueden recibir OC en estado EMITIDA o RECIBIDA_PARCIALMENTE
+
+    loop Para cada ítem recibido en el remito
+        Sistema->>OC: getLineaPorItem(idItem)
+        activate OC
+        OC-->>Sistema: lineaOC
+        deactivate OC
+
+        Sistema->>Linea: getCantidadPendiente()
+        activate Linea
+        Linea-->>Sistema: cantPendiente
+        deactivate Linea
+
+        alt cantidadRecibida <= cantPendiente
+            Sistema->>Linea: registrarRecepcion(cantidadRecibida)
+            activate Linea
+            Linea->>Linea: actualizarCantidadRecibida(cantidadRecibida)
+            deactivate Linea
+            
+            Sistema->>Linea: getItem()
+            activate Linea
+            Linea-->>Sistema: item
+            deactivate Linea
+
+            Sistema->>Item: getTipoItem()
+            activate Item
+            Item-->>Sistema: tipoItem (PRODUCTO o SERVICIO)
+            deactivate Item
+
+            alt tipoItem == "PRODUCTO"
+                Sistema->>Prod: incrementarStock(cantidadRecibida)
+                activate Prod
+                Prod->>Prod: setStockActual(nuevoStock)
+                Prod-->>Sistema: stockActualizado
+                deactivate Prod
+            else tipoItem == "SERVICIO"
+                Note over Sistema, Item: Es una prestación intangible. No impacta stock físico.
+            end
+        else cantidadRecibida > cantPendiente
+            Note over Sistema: Rechazar recepción por exceder cantidad acordada
+        end
+    end
+
+    Note over Sistema, OC: Actualización dinámica del estado de la OC
+
+    Sistema->>OC: evaluarYActualizarEstado()
+    activate OC
+
+    loop Para cada LineaOC de la orden
+        OC->>Linea: estaCompletamenteRecibida()
+        activate Linea
+        Linea-->>OC: true / false
+        deactivate Linea
+    end
+
+    alt Todas las líneas están completas
+        OC->>OC: setEstado(CERRADA)
+    else Recepción parcial
+        OC->>OC: setEstado(RECIBIDA_PARCIALMENTE)
+    end
+
+    OC-->>Sistema: estadoFinal
+    deactivate OC
+
+    Sistema-->>Operador: Recepción procesada. Stock y estado de la OC actualizados.
+    deactivate Sistema

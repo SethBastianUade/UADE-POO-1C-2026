@@ -341,15 +341,3 @@ classDiagram
     OrdenDePago "1" *-- "0..*" Retencion : calcula
     OrdenDePago "0..*" --> "1" Proveedor : paga a
     OrdenDePago "0..*" --> "1" Usuario : creada por
-
-    Usuario "0..*" --> "1" RolUsuario : tiene rol
-
-    %% ─── DEPENDENCIA ENUMERACIÓN ───────────────────────
-    Usuario ..> RolUsuario
-    CertificadoExclusion ..> TipoImpuesto
-    Retencion ..> TipoImpuesto
-    Proveedor ..> CondicionImpositiva
-    OrdenDeCompra ..> EstadoOC
-    DocumentoComercial ..> EstadoCancelacionDocumento
-    DocumentoComercial ..> EstadoRegistroDocumento
-    

@@ -49,248 +49,247 @@ classDiagram
 
     %% ─── SISTEMA ───────────────────────────────────────────
     class SistemadeGestiónIntegraldeCompras{
-        -List<OrdenDeCompra> ordenesDeCompra
-        -List<Proveedor> proveedores
-        -List<DocumentoComercial> documentosComerciales
-        -List<OrdenDePago> ordenesDePago
-        -List<Usuario> usuarios
-        -List<Item> items
-        -List<Rubro> rubros
-        +void confirmarOrden(OrdenDeCompra oc, Usuario usuario)
-        +void aprobarSupervisorOrden(OrdenDeCompra oc, Usuario supervisor)
-        +void cancelarOrden(OrdenDeCompra oc, Usuario usuario)
-        +void registrarRecepcionOC(OrdenDeCompra oc, LineaOC linea, double cantidadRecibida)
-        +boolean estaAmparadaEnOC(OrdenDeCompra oc, Item item)
-        +double obtenerPrecioAcordado(OrdenDeCompra oc, Item item)
-        +void generarOrdenPago(OrdenDePago op)
-        +void actualizarEstadosDocumentosOP(OrdenDePago op)
-        +boolean validarFacturaConOC(Factura f, OrdenDeCompra oc)
-        +boolean validarPreciosFactura(Factura f, OrdenDeCompra oc)
-        +boolean validarCoherenciaItemsFactura(Factura f, Proveedor p)
-        +boolean superaLimiteCredito(Proveedor p, double montoNuevaOC)
-        +boolean tieneExclusionVigente(Proveedor p, TipoImpuesto tipo, LocalDate fecha)
+        -ordenesDeCompra: List<OrdenDeCompra>
+        -proveedores: List<Proveedor>
+        -documentosComerciales: List<DocumentoComercial>
+        -ordenesDePago: List<OrdenDePago>
+        -usuarios: List<Usuario>
+        -items: List<Item>
+        -rubros: List<Rubro>
+        +confirmarOrden(oc: OrdenDeCompra, usuario: Usuario) void
+        +aprobarSupervisorOrden(oc: OrdenDeCompra, supervisor: Usuario) void
+        +cancelarOrden(oc: OrdenDeCompra, usuario: Usuario) void
+        +registrarRecepcionOC(oc: OrdenDeCompra, linea: LineaOC, cantidadRecibida: double) void
+        +estaAmparadaEnOC(oc: OrdenDeCompra, item: Item) boolean
+        +obtenerPrecioAcordado(oc: OrdenDeCompra, item: Item) double
+        +generarOrdenPago(op: OrdenDePago) void
+        +actualizarEstadosDocumentosOP(op: OrdenDePago) void
+        +validarFacturaConOC(f: Factura, oc: OrdenDeCompra) boolean
+        +validarPreciosFactura(f: Factura, oc: OrdenDeCompra) boolean
+        +validarCoherenciaItemsFactura(f: Factura, p: Proveedor) boolean
+        +superaLimiteCredito(p: Proveedor, montoNuevaOC: double) boolean
+        +tieneExclusionVigente(p: Proveedor, tipo: TipoImpuesto, fecha: LocalDate) boolean
     }
 
     %% ─── SEGURIDAD ───────────────────────────────────────────
     class Usuario {
-        -String nombreUsuario
-        -String passwordHash
-        -String nombre
-        -String apellido
-        -RolUsuario rol
-        -boolean activo
-        +boolean esSupervisor()
-        +boolean tienePermiso(String accion)
+        -nombreUsuario: String
+        -passwordHash: String
+        -nombre: String
+        -apellido: String
+        -rol: RolUsuario
+        -activo: boolean
+        +esSupervisor() boolean
+        +tienePermiso(accion: String) boolean
     }
 
     %% ─── RUBROS ──────────────────────────────────────────────
     class Rubro {
-        -int idRubro
-        -String codigo
-        -String descripcion
-        -boolean activo
-        +String getCodigo()
-        +String getDescripcion()
+        -idRubro: int
+        -codigo: String
+        -descripcion: String
+        -activo: boolean
+        +getCodigo() String
+        +getDescripcion() String
     }
 
     %% ─── PROVEEDORES ─────────────────────────────────────────
     class Proveedor {
-        -int idProveedor
-        -String cuit
-        -String razonSocial
-        -String nombreComercial
-        -String domicilio
-        -String teléfono
-        -String correoElectrónico
-        -CondicionImpositiva condicionImpositiva
-        -String nroInscripcionIIBB
-        -LocalDate fechaInicioActividades
-        -double limiteDeudaAutorizado
-        -boolean activo
-        +double calcularDeudaActual()
-        +double calcularMontoComprometido(double montoNuevaOC)
+        -idProveedor: int
+        -cuit: String
+        -razonSocial: String
+        -nombreComercial: String
+        -domicilio: String
+        -teléfono: String
+        -correoElectrónico: String
+        -condicionImpositiva: CondicionImpositiva
+        -nroInscripcionIIBB: String
+        -fechaInicioActividades: LocalDate
+        -limiteDeudaAutorizado: double
+        -activo: boolean
+        +calcularDeudaActual() double
+        +calcularMontoComprometido(montoNuevaOC: double) double
     }
 
     class CertificadoExclusion {
-        -int idCertificado
-        -String numeroCertificado
-        -TipoImpuesto tipoImpuesto
-        -LocalDate fechaDesde
-        -LocalDate fechaHasta
-        +boolean estaVigente(LocalDate fecha)
+        -idCertificado: int
+        -numeroCertificado: String
+        -tipoImpuesto: TipoImpuesto
+        -fechaDesde: LocalDate
+        -fechaHasta: LocalDate
+        +estaVigente(fecha: LocalDate) boolean
     }
 
     %% ─── ÍTEMS (herencia) ────────────────────────────────────
     class Item {
         <<abstract>>
-        -int idItem
-        -String codigo
-        -String descripcion
-        -String unidadMedida
-        -double precioUnitarioBase
-        -double alicuotaIVA
-        -boolean activo
-        +abstract String getTipoItem()
-        +double calcularPrecioConIVA()
+        -idItem: int
+        -codigo: String
+        -descripcion: String
+        -unidadMedida: String
+        -precioUnitarioBase: double
+        -alicuotaIVA: double
+        -activo: boolean
+        +abstract getTipoItem() String
+        +calcularPrecioConIVA() double
     }
 
     class Producto {
-        -String lote
-        -LocalDate fechaVencimiento
-        -int stockActual
-        -int stockMinimo
-        +String getTipoItem()
-        +boolean requiereReposicion()
+        -lote: String
+        -fechaVencimiento: LocalDate
+        -stockActual: int
+        -stockMinimo: int
+        +getTipoItem() String
+        +requiereReposicion() boolean
     }
 
     class Servicio {
-        -String modalidadPrestacion
-        -int duracionEstimadaHoras
-        -String requisitosTecnicos
-        +String getTipoItem()
+        -modalidadPrestacion: String
+        -duracionEstimadaHoras: int
+        -requisitosTecnicos: String
+        +getTipoItem() String
     }
 
     %% ─── RELACIÓN PROVEEDOR–ÍTEM (N:M con precio acordado) ──
     class ProveedorItem {
-        -double precioAcordado
-        -LocalDate fechaAcuerdo
-        -boolean activo
-        +double getPrecioAcordado()
+        -precioAcordado: double
+        -fechaAcuerdo: LocalDate
+        -activo: boolean
+        +getPrecioAcordado() double
     }
 
     %% ─── ORDEN DE COMPRA ─────────────────────────────────────
     class OrdenDeCompra {
-        -int idOC
-        -String numeroOC
-        -LocalDate fechaEmision
-        -LocalDate fechaEntregaEsperada
-        -EstadoOC estado
-        -String observaciones
-        -Usuario operadorCreador
-        -Usuario supervisorAprobador
-        +double calcularTotal()
+        -idOC: int
+        -numeroOC: String
+        -fechaEmision: LocalDate
+        -fechaEntregaEsperada: LocalDate
+        -estado: EstadoOC
+        -observaciones: String
+        -operadorCreador: Usuario
+        -supervisorAprobador: Usuario
+        +calcularTotal() double
     }
 
     class LineaOC {
-        -int idLineaOC
-        -int cantidad
-        -double precioUnitarioAcordado
-        -double cantidadRecibida
-        +double getSubtotal()
-        +boolean estaCompletamenteRecibida()
+        -idLineaOC: int
+        -cantidad: int
+        -precioUnitarioAcordado: double
+        -cantidadRecibida: double
+        +getSubtotal() double
+        +estaCompletamenteRecibida() boolean
     }
 
     %% ─── DOCUMENTOS COMERCIALES (herencia) ──────────────────
     class DocumentoComercial {
         <<abstract>>
-        -int idDocumento
-        -String numeroDocumento
-        -LocalDate fechaEmision
-        -double importeTotal
-        -EstadoCancelacionDocumento estadoCancelacion
-        -EstadoRegistroDocumento estadoRegistro
-        -double montoPagado
-        +abstract String getTipoDocumento()
-        +double getSaldoPendiente()
-        +void aplicarPago(double monto)
-        +boolean estaCancelado()
+        -idDocumento: int
+        -numeroDocumento: String
+        -fechaEmision: LocalDate
+        -importeTotal: double
+        -estadoCancelacion: EstadoCancelacionDocumento
+        -estadoRegistro: EstadoRegistroDocumento
+        -montoPagado: double
+        +abstract getTipoDocumento() String
+        +getSaldoPendiente() double
+        +aplicarPago(monto: double) void
+        +estaCancelado() boolean
     }
 
     class Factura {
-        -String cae
-        -LocalDate fechaVencimientoCAE
-        -double baseImponibleIVA
-        -double montoIVA
-        +String getTipoDocumento()
-      
+        -cae: String
+        -fechaVencimientoCAE: LocalDate
+        -baseImponibleIVA: double
+        -montoIVA: double
+        +getTipoDocumento() String
     }
 
     class NotaDeDebito {
-        -String motivoDebito
-        -Factura facturaOrigen
-        +String getTipoDocumento()
+        -motivoDebito: String
+        -facturaOrigen: Factura
+        +getTipoDocumento() String
     }
 
     class NotaDeCredito {
-        -String motivoCredito
-        -Factura facturaOrigen
-        +String getTipoDocumento()
+        -motivoCredito: String
+        -facturaOrigen: Factura
+        +getTipoDocumento() String
     }
 
     %% ─── LÍNEA DE DOCUMENTO ──────────────────────────────────
     class LineaDocumento {
-        -int idLinea
-        -int cantidad
-        -double precioUnitario
-        -double alicuotaIVA
-        +double getSubtotal()
-        +double getSubtotalConIVA()
+        -idLinea: int
+        -cantidad: int
+        -precioUnitario: double
+        -alicuotaIVA: double
+        +getSubtotal() double
+        +getSubtotalConIVA() double
     }
 
     %% ─── RETENCIONES ─────────────────────────────────────────
     class Retencion {
-        -TipoImpuesto tipoImpuesto
-        -double baseImponible
-        -double porcentaje
-        -double montoRetenido
-        -double mniAplicado
-        +double calcularMonto()
+        -tipoImpuesto: TipoImpuesto
+        -baseImponible: double
+        -porcentaje: double
+        -montoRetenido: double
+        -mniAplicado: double
+        +calcularMonto() double
     }
 
     %% ─── MEDIOS DE PAGO (herencia polimórfica) ───────────────
     class MedioDePago {
         <<abstract>>
-        -int idMedioPago
-        -double importe
-        +abstract String getTipo()
-        +double getImporte()
+        -idMedioPago: int
+        -importe: double
+        +abstract getTipo() String
+        +getImporte() double
     }
 
     class Efectivo {
-        +String getTipo()
+        +getTipo() String
     }
 
     class TransferenciaBancaria {
-        -String nroReferencia
-        -String cuentaOrigen
-        +String getTipo()
+        -nroReferencia: String
+        -cuentaOrigen: String
+        +getTipo() String
     }
 
     class ChequePropio {
-        -String nroCheque
-        -String banco
-        -LocalDate fechaEmision
-        -LocalDate fechaVencimiento
-        -String firmante
-        +String getTipo()
+        -nroCheque: String
+        -banco: String
+        -fechaEmision: LocalDate
+        -fechaVencimiento: LocalDate
+        -firmante: String
+        +getTipo() String
     }
 
     class ChequeDeTerceros {
-        -String nroCheque
-        -String banco
-        -LocalDate fechaEmision
-        -LocalDate fechaVencimiento
-        -String firmanteOriginal
-        +String getTipo()
+        -nroCheque: String
+        -banco: String
+        -fechaEmision: LocalDate
+        -fechaVencimiento: LocalDate
+        -firmanteOriginal: String
+        +getTipo() String
     }
 
     %% ─── ORDEN DE PAGO ───────────────────────────────────────
     class OrdenDePago {
-        -int idOP
-        -String numeroOP
-        -LocalDate fechaEmision
-        -double totalBrutoPagado
-        -double totalRetenido
-        -double totalNetoPagar
-        -Usuario operadorCreador
-        +double calcularTotalBruto()
-        +double calcularTotalRetenido()
-        +double calcularNeto()
+        -idOP: int
+        -numeroOP: String
+        -fechaEmision: LocalDate
+        -totalBrutoPagado: double
+        -totalRetenido: double
+        -totalNetoPagar: double
+        -operadorCreador: Usuario
+        +calcularTotalBruto() double
+        +calcularTotalRetenido() double
+        +calcularNeto() double
     }
 
     class DocumentoPago {
-        -double montoAplicado
-        +double getMontoAplicado()
+        -montoAplicado: double
+        +getMontoAplicado() double
     }
 
     %% ─── HERENCIAS ───────────────────────────────────────────
@@ -353,5 +352,4 @@ classDiagram
     OrdenDeCompra ..> EstadoOC
     DocumentoComercial ..> EstadoCancelacionDocumento
     DocumentoComercial ..> EstadoRegistroDocumento
-
     

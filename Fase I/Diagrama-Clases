@@ -173,7 +173,7 @@ classDiagram
 
     class LineaOC {
         -idLineaOC: int
-        -cantidad: int
+        -cantidad: double
         -precioUnitarioAcordado: double
         -cantidadRecibida: double
         +getSubtotal() double
@@ -219,7 +219,7 @@ classDiagram
     %% ─── LÍNEA DE DOCUMENTO ──────────────────────────────────
     class LineaDocumento {
         -idLinea: int
-        -cantidad: int
+        -cantidad: double
         -precioUnitario: double
         -alicuotaIVA: double
         +getSubtotal() double
@@ -322,16 +322,17 @@ classDiagram
 
     Item "0..*" --> "1" Rubro : clasificado en
 
+
     OrdenDeCompra "1" *-- "1..*" LineaOC : compuesta de
     LineaOC "0..*" --> "1" Item : referencia
     OrdenDeCompra "0..*" --> "1" Proveedor : dirigida a
     OrdenDeCompra "0..*" --> "1" Usuario : creada por
     OrdenDeCompra "0..*" --> "0..1" Usuario : aprobada por
 
-    Factura "1" *-- "1..*" LineaDocumento : contiene
-    LineaDocumento "0..*" --> "1" Item : referencia
     NotaDeDebito "0..*" --> "1" Factura : origina en
     NotaDeCredito "0..*" --> "1" Factura : origina en
+    DocumentoComercial "1" *-- "1..*" LineaDocumento : contiene
+    LineaDocumento "0..*" --> "1" Item : referencia
     DocumentoComercial "0..*" --> "1" Proveedor : emitido por
     DocumentoComercial "0..*" --> "0..*" OrdenDeCompra : amparada por
 

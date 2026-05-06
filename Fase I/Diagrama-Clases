@@ -59,7 +59,7 @@ classDiagram
         +confirmarOrden(oc: OrdenDeCompra, usuario: Usuario) void
         +aprobarSupervisorOrden(oc: OrdenDeCompra, supervisor: Usuario) void
         +cancelarOrden(oc: OrdenDeCompra, usuario: Usuario) void
-        +registrarRecepcionOC(oc: OrdenDeCompra, linea: LineaOC, cantidadRecibida: double) void
+        +registrarRecepcionOC(nroOC: String, itemsRecibidos: List) void
         +estaAmparadaEnOC(oc: OrdenDeCompra, item: Item) boolean
         +obtenerPrecioAcordado(oc: OrdenDeCompra, item: Item) double
         +generarOrdenPago(op: OrdenDePago) void
@@ -141,6 +141,8 @@ classDiagram
         -stockMinimo: int
         +getTipoItem() String
         +requiereReposicion() boolean
+        +incrementarStock(cantidad: double) void
+        +setStockActual(nuevoStock: int) void
     }
 
     class Servicio {
@@ -169,6 +171,10 @@ classDiagram
         -operadorCreador: Usuario
         -supervisorAprobador: Usuario
         +calcularTotal() double
+        +getEstado() EstadoOC
+        +setEstado(nuevoEstado: EstadoOC) void
+        +getLineaPorItem(idItem: int) LineaOC
+        +evaluarYActualizarEstado() void
     }
 
     class LineaOC {
@@ -178,6 +184,10 @@ classDiagram
         -cantidadRecibida: double
         +getSubtotal() double
         +estaCompletamenteRecibida() boolean
+        +getCantidadPendiente() double
+        +registrarRecepcion(cantidad: double) void
+        +actualizarCantidadRecibida(cantidad: double) void
+        +getItem() Item
     }
 
     %% ─── DOCUMENTOS COMERCIALES (herencia) ──────────────────

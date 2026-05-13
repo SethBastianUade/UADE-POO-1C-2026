@@ -1,5 +1,7 @@
 package mvc.model;
 
+import mvc.enums.TipoImpuesto;
+
 public class Retencion {
     private TipoImpuesto tipoImpuesto;
     private double baseImponible;

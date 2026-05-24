@@ -6,9 +6,9 @@ public class Servicio extends Item {
     private String requisitosTecnicos;
 
     public Servicio(int idItem, String codigo, String descripcion, String unidadMedida,
-                    double precioUnitarioBase, double alicuotaIVA,
+                    double precioUnitarioBase, double alicuotaIVA,Rubro rubro,
                     String modalidadPrestacion, int duracionEstimadaHoras, String requisitosTecnicos) {
-        super(idItem, codigo, descripcion, unidadMedida, precioUnitarioBase, alicuotaIVA);
+        super(idItem, codigo, descripcion, unidadMedida, precioUnitarioBase, alicuotaIVA,rubro);
         this.modalidadPrestacion = modalidadPrestacion;
         this.duracionEstimadaHoras = duracionEstimadaHoras;
         this.requisitosTecnicos = requisitosTecnicos;

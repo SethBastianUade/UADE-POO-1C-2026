@@ -21,4 +21,8 @@ public class Rubro {
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
+    @Override
+    public String toString() {
+        return codigo + " - " + descripcion;
+    }
 }

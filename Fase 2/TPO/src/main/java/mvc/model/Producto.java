@@ -9,9 +9,9 @@ public class Producto extends Item {
     private int stockMinimo;
 
     public Producto(int idItem, String codigo, String descripcion, String unidadMedida,
-                    double precioUnitarioBase, double alicuotaIVA,
+                    double precioUnitarioBase, double alicuotaIVA, Rubro rubro,
                     String lote, LocalDate fechaVencimiento, int stockActual, int stockMinimo) {
-        super(idItem, codigo, descripcion, unidadMedida, precioUnitarioBase, alicuotaIVA);
+        super(idItem, codigo, descripcion, unidadMedida, precioUnitarioBase, alicuotaIVA,rubro);
         this.lote = lote;
         this.fechaVencimiento = fechaVencimiento;
         this.stockActual = stockActual;
@@ -26,7 +26,9 @@ public class Producto extends Item {
     }
 
     public void incrementarStock(double cantidad) {
-        this.stockActual += (int) cantidad;
+        if (cantidad > 0) {
+            this.stockActual += cantidad;
+        }
     }
 
     public void setStockActual(int nuevoStock) { this.stockActual = nuevoStock; }

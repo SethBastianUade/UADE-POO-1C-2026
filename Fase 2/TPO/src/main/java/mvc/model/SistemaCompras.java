@@ -3,6 +3,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import mvc.enums.RolUsuario;
+
 public class SistemaCompras {
     // 1. La variable estática que guardará la única instancia de la clase
     private static SistemaCompras instanciaUnica;
@@ -15,6 +17,7 @@ public class SistemaCompras {
     private List<Usuario> usuarios;
     private List<Item> items;
     private List<Rubro> rubros;
+    private Usuario usuarioLogueado; // Para saber quién está usando el sistema en cada momento
 
     // Variable auxiliar para autoincrementar el ID de los rubros
     private int contadorIdRubros = 1;
@@ -30,6 +33,25 @@ public class SistemaCompras {
         usuarios = new ArrayList<>();
         items = new ArrayList<>();
         rubros = new ArrayList<>();
+        usuarios.add(new Usuario("admin", "1234", "Juan", "Pérez", RolUsuario.SUPERVISOR));
+        usuarios.add(new Usuario("operador", "1234", "María", "Gómez", RolUsuario.OPERADOR));
+    }
+
+    public Usuario autenticarUsuario(String nombreUsuario, String password) {
+        for (Usuario u : usuarios) {
+            if (u.getNombreUsuario().equals(nombreUsuario) && 
+                u.getPasswordHash().equals(password) && 
+                u.isActivo()) {
+                
+                this.usuarioLogueado = u;
+                return u; // Retorna el usuario si los datos coinciden
+            }
+        }
+        return null; // Retorna nulo si falla
+    }
+
+    public Usuario getUsuarioLogueado() {
+        return usuarioLogueado;
     }
 
     // 4. Método para obtener la instancia 

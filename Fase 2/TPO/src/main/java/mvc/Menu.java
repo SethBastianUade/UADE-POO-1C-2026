@@ -10,7 +10,9 @@ public class Menu {
         // El "escritorio" donde vivirán las ventanas internas
         private JDesktopPane escritorio;
 
+        
         public VentanaPrincipal() {
+
             setTitle("Sistema de Gestión Integral de Compras");
             setSize(1200, 1000);
             setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -19,6 +21,7 @@ public class Menu {
             escritorio = new JDesktopPane();
             add(escritorio, BorderLayout.CENTER);
 
+            
             crearMenu();
         }
 
@@ -63,10 +66,22 @@ public class Menu {
         }
 
         public static void main(String[] args) {
+            
             // Hilo seguro de Swing
             SwingUtilities.invokeLater(() -> {
                 new VentanaPrincipal().setVisible(true);
             });
+
+            SwingUtilities.invokeLater(() -> {
+            // 1. Instanciamos la Vista del Login
+            LoginGUI vistaLogin = new LoginGUI();
+            
+            // 2. Instanciamos el Controlador y le pasamos la vista
+            new LoginController(vistaLogin);
+            
+            // 3. Hacemos visible el Login
+            vistaLogin.setVisible(true);
+        });
         }
     }
 }

@@ -55,7 +55,6 @@ public class SistemaCompras {
     }
 
     // 4. Método para obtener la instancia 
-    // Usamos "synchronized" para que sea seguro si dos ventanas lo piden al mismo tiempo exacto
     public static synchronized SistemaCompras getInstance() {
         if (instanciaUnica == null) {
             instanciaUnica = new SistemaCompras();
@@ -96,19 +95,16 @@ public class SistemaCompras {
         }
         return false;
     }
-    // Alta de Producto
     public void agregarProducto(String cod, String desc, String uni, double precio, 
                                 double iva, Rubro rubro, String lote, LocalDate vto,int stockActual, int stockMin) {
         Producto p = new Producto(contadorIdItems++, cod, desc, uni, precio, iva, rubro, lote, vto, stockActual, stockMin);
         items.add(p);
     }
-    // Alta de Servicio
     public void agregarServicio(String cod, String desc, String uni, double precio, 
                                 double iva, Rubro rubro, String mod, int horas, String req) {
         Servicio s = new Servicio(contadorIdItems++, cod, desc, uni, precio, iva, rubro, mod, horas, req);
         items.add(s);
     }
-
     public List<Item> getItems() {
         return items;
     }

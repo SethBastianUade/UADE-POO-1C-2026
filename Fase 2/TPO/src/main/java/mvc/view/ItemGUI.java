@@ -1,5 +1,6 @@
 package mvc.view;
 
+import mvc.controller.ItemController;
 import mvc.dto.ItemDTO;
 import mvc.model.Rubro;
 import javax.swing.*;
@@ -32,9 +33,10 @@ public class ItemGUI extends JInternalFrame {
         super("Gestión de Ítems", true, true, true, true);
         setSize(1200, 800);
         setLayout(new BorderLayout());
-
+    
         inicializarFormulario();
         inicializarTabla();
+        new ItemController(this);
     }
 
     private void inicializarFormulario() {

@@ -1,9 +1,8 @@
 package mvc.view;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-
 import mvc.dto.RubroDTO;
-
+import mvc.controller.RubroController;
 import java.awt.*;
 import java.util.List;
 
@@ -23,9 +22,9 @@ public class RubroGUI extends JInternalFrame {
         super("Gestión de Rubros", true, true, true, true);
         setSize(800, 400);
         setLayout(new BorderLayout());
-
         inicializarFormulario();
         inicializarTabla();
+        new RubroController(this);
     }
 
     private void inicializarFormulario() {

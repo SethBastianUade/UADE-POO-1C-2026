@@ -7,7 +7,6 @@ import java.awt.*;
 public class Menu {
     public static class VentanaPrincipal extends JFrame {
 
-        // El "escritorio" donde vivirán las ventanas internas
         private JDesktopPane escritorio;
 
         
@@ -21,7 +20,6 @@ public class Menu {
             escritorio = new JDesktopPane();
             add(escritorio, BorderLayout.CENTER);
 
-            
             crearMenu();
         }
 
@@ -45,9 +43,6 @@ public class Menu {
             // Instanciamos la vista
             RubroGUI vistaRubros = new RubroGUI();
             
-            // Instanciamos el controlador y le pasamos la vista para que la controle
-            new RubroController(vistaRubros);
-
             // Agregamos la ventanita al escritorio y la hacemos visible
             escritorio.add(vistaRubros);
             vistaRubros.setVisible(true);
@@ -56,9 +51,6 @@ public class Menu {
         private void abrirVistaProductoServicio() {
             // Instanciamos la vista
             ItemGUI vistaItems = new ItemGUI();
-            
-            // Instanciamos el controlador y le pasamos la vista para que la controle
-            new ItemController(vistaItems);
 
             // Agregamos la ventanita al escritorio y la hacemos visible
             escritorio.add(vistaItems);
@@ -75,9 +67,6 @@ public class Menu {
             SwingUtilities.invokeLater(() -> {
             // 1. Instanciamos la Vista del Login
             LoginGUI vistaLogin = new LoginGUI();
-            
-            // 2. Instanciamos el Controlador y le pasamos la vista
-            new LoginController(vistaLogin);
             
             // 3. Hacemos visible el Login
             vistaLogin.setVisible(true);

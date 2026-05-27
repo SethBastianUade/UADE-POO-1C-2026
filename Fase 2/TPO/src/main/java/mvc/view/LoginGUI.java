@@ -1,5 +1,8 @@
 package mvc.view;
 import javax.swing.*;
+
+import mvc.controller.LoginController;
+
 import java.awt.*;
 
 public class LoginGUI extends JFrame{
@@ -13,8 +16,8 @@ public class LoginGUI extends JFrame{
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null); // Centrar en pantalla
         setResizable(false);
-
         inicializarComponentes();
+        new LoginController(this);
     }
 
     private void inicializarComponentes() {

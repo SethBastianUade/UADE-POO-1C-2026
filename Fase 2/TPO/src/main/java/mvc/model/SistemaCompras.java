@@ -3,6 +3,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import mvc.enums.CondicionImpositiva;
 import mvc.enums.RolUsuario;
 
 public class SistemaCompras {
@@ -22,6 +23,7 @@ public class SistemaCompras {
     // Variable auxiliar para autoincrementar el ID de los rubros
     private int contadorIdRubros = 1;
     private int contadorIdItems = 1;
+    private int contadorIdProveedores = 1;
 
     // 3. Constructor 
     private SistemaCompras() {
@@ -35,6 +37,13 @@ public class SistemaCompras {
         rubros = new ArrayList<>();
         usuarios.add(new Usuario("admin", "1234", "Juan", "Pérez", RolUsuario.SUPERVISOR));
         usuarios.add(new Usuario("operador", "1234", "María", "Gómez", RolUsuario.OPERADOR));
+    }
+    
+    public static synchronized SistemaCompras getInstance() {
+        if (instanciaUnica == null) {
+            instanciaUnica = new SistemaCompras();
+        }
+        return instanciaUnica;
     }
 
     public Usuario autenticarUsuario(String nombreUsuario, String password) {
@@ -55,12 +64,7 @@ public class SistemaCompras {
     }
 
     // 4. Método para obtener la instancia 
-    public static synchronized SistemaCompras getInstance() {
-        if (instanciaUnica == null) {
-            instanciaUnica = new SistemaCompras();
-        }
-        return instanciaUnica;
-    }
+ 
 
     // Métodos para la gestión de rubros
     public List<Rubro> getRubros() {
@@ -107,5 +111,68 @@ public class SistemaCompras {
     }
     public List<Item> getItems() {
         return items;
+    }
+    public void agregarProveedor(String cuit, String razonSocial, String nombreComercial, String domicilio, String telefono, 
+                                 String correo, CondicionImpositiva condicion,String nroInscripcionIIBB,LocalDate fechaInicioActividades, double limite) {
+        Proveedor p = new Proveedor(contadorIdProveedores++,cuit, razonSocial,  nombreComercial,
+                     domicilio, telefono, correo,condicion,  nroInscripcionIIBB, fechaInicioActividades, limite);
+        proveedores.add(p);
+    }
+
+    public Proveedor buscarProveedorPorCuit(String cuit) {
+        for (Proveedor p : proveedores) {
+            if (p.getCuit().equals(cuit)) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    public boolean modificarProveedor(String cuit, String razonSocial, String telefono, 
+                                      String correo, CondicionImpositiva condicion, double limite) {
+        Proveedor p = buscarProveedorPorCuit(cuit);
+        if (p != null) {
+            p.setRazonSocial(razonSocial);
+            p.setTelefono(telefono);
+            p.setCorreoElectronico(correo);
+            p.setCondicionImpositiva(condicion);
+            p.setLimiteDeudaAutorizado(limite);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean cambiarEstadoProveedor(String cuit) {
+        Proveedor p = buscarProveedorPorCuit(cuit);
+        if (p != null) {
+            p.setActivo(!p.isActivo());
+            return true;
+        }
+        return false;
+    }
+
+    public List<Proveedor> getProveedores() {
+        return proveedores;
+    }
+
+    public boolean asignarRubroAProveedor(String cuitProveedor, String codigoRubro) {
+
+        Proveedor p = buscarProveedorPorCuit(cuitProveedor);
+        Rubro r = buscarRubro(codigoRubro); 
+
+        if (p != null && r != null) {
+            return p.agregarRubro(r);
+        }
+        return false;
+    }
+
+    public boolean desvincularRubroDeProveedor(String cuitProveedor, String codigoRubro) {
+        Proveedor p = buscarProveedorPorCuit(cuitProveedor);
+        Rubro r = buscarRubro(codigoRubro);
+
+        if (p != null && r != null) {
+            return p.quitarRubro(r);
+        }
+        return false;
     }
 }

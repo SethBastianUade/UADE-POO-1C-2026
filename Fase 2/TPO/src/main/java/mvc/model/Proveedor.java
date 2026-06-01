@@ -1,7 +1,8 @@
 package mvc.model;
 import mvc.enums.CondicionImpositiva;
-
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Proveedor {
 
@@ -17,6 +18,10 @@ public class Proveedor {
     private LocalDate fechaInicioActividades;
     private double limiteDeudaAutorizado;
     private boolean activo;
+
+    
+    private List<Rubro> rubros;
+    private List<CertificadoExclusion> certificados;
 
     // Constructor
     public Proveedor(int idProveedor, String cuit, String razonSocial, String nombreComercial,
@@ -35,6 +40,14 @@ public class Proveedor {
         this.fechaInicioActividades = fechaInicioActividades;
         this.limiteDeudaAutorizado = limiteDeudaAutorizado;
         this.activo = true;
+
+        this.rubros = new ArrayList<>();
+        this.certificados = new ArrayList<>();
+
+        this.nombreComercial = razonSocial; 
+        this.domicilio = "No especificado";
+        this.nroInscripcionIIBB = "Pendiente";
+        this.fechaInicioActividades = LocalDate.now();
     }
 
     // Métodos de negocio
@@ -83,4 +96,20 @@ public class Proveedor {
 
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
+
+    public List<Rubro> getRubros() { return rubros; }public List<Rubro> getRubrosAsociados() {
+        return rubros;
+    }
+
+    public boolean agregarRubro(Rubro rubro) {
+        // Evitamos agregar el mismo rubro dos veces
+        if (!rubros.contains(rubro)) {
+            rubros.add(rubro);
+            return true;
+        }
+        return false;
+    }
+    public boolean quitarRubro(Rubro rubro) {
+        return rubros.remove(rubro);
+    }
 }

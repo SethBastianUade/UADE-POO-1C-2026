@@ -28,13 +28,16 @@ public class Menu {
             JMenu menuCatalogos = new JMenu("Maestros");
             JMenuItem itemRubros = new JMenuItem("Gestionar Rubros");
             JMenuItem itemProductoServicio = new JMenuItem("Gestionar Productos/Servicios - Rubros");
+            JMenuItem itemProveedor = new JMenuItem("Gestionar Proveedores");
 
 
             itemRubros.addActionListener(e -> abrirVistaRubros());
             itemProductoServicio.addActionListener(e -> abrirVistaProductoServicio());
+            itemProveedor.addActionListener(e -> abrirVistaProveedor());
 
             menuCatalogos.add(itemRubros);
             menuCatalogos.add(itemProductoServicio);
+            menuCatalogos.add(itemProveedor);
             barraMenu.add(menuCatalogos);
             setJMenuBar(barraMenu);
         }
@@ -55,6 +58,15 @@ public class Menu {
             // Agregamos la ventanita al escritorio y la hacemos visible
             escritorio.add(vistaItems);
             vistaItems.setVisible(true);
+        }
+
+        private void abrirVistaProveedor() {
+            // Instanciamos la vista
+            ProveedorGUI vistaProveedores = new ProveedorGUI();
+
+            // Agregamos la ventanita al escritorio y la hacemos visible
+            escritorio.add(vistaProveedores);
+            vistaProveedores.setVisible(true);
         }
 
         public static void main(String[] args) {

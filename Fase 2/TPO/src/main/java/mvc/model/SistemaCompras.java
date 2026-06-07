@@ -5,6 +5,7 @@ import java.util.List;
 
 import mvc.enums.CondicionImpositiva;
 import mvc.enums.RolUsuario;
+import mvc.enums.TipoImpuesto;
 
 public class SistemaCompras {
     // 1. La variable estática que guardará la única instancia de la clase
@@ -174,5 +175,31 @@ public class SistemaCompras {
             return p.quitarRubro(r);
         }
         return false;
+    }
+
+    public void agregarCertificadoAProveedor(String cuit, String numero, TipoImpuesto tipo, LocalDate desde, LocalDate hasta) {
+        Proveedor p = buscarProveedorPorCuit(cuit);
+        if (p != null) {
+            // Un id autoincremental simple para el certificado
+            int idCert = p.getCertificados().size() + 1;
+            CertificadoExclusion nuevo = new CertificadoExclusion(idCert, numero, tipo, desde, hasta);
+            p.agregarCertificado(nuevo);
+        }
+    }
+
+    public void registrarPrecioAcordado(String cuit, String codigoItem, double precio) {
+        Proveedor p = buscarProveedorPorCuit(cuit);
+        // Buscamos el ítem en la lista global de ítems del sistema
+        Item itemEncontrado = null;
+        for (Item i : items) {
+            if (i.getCodigo().equalsIgnoreCase(codigoItem)) {
+                itemEncontrado = i;
+                break;
+            }
+        }
+
+        if (p != null && itemEncontrado != null) {
+            p.acordarPrecioItem(itemEncontrado, precio);
+        }
     }
 }

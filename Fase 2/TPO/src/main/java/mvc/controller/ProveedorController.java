@@ -5,6 +5,8 @@ import mvc.model.Proveedor;
 import mvc.model.SistemaCompras;
 import mvc.view.ProveedorGUI;
 import mvc.view.AsociarProveedorRubroGUI;
+import mvc.view.CertificadosProveedorGUI;
+import mvc.view.PreciosAcordadosGUI;
 
 import javax.swing.JOptionPane;
 import javax.swing.event.ListSelectionEvent;
@@ -26,6 +28,9 @@ public class ProveedorController {
         this.vista.getBtnCambiarEstado().addActionListener(e -> cambiarEstado());
         this.vista.getBtnLimpiar().addActionListener(e -> vista.limpiarFormulario());
         this.vista.getBtnAsociarRubros().addActionListener(e -> abrirVentanaRubros());
+        this.vista.getBtnCertificados().addActionListener(e -> abrirVentanaCertificados());
+        this.vista.getBtnPreciosAcordados().addActionListener(e -> abrirVentanaPrecios());
+
         // Evento de selección en la tabla
         this.vista.getTablaProveedores().getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
@@ -206,6 +211,28 @@ public class ProveedorController {
             dtos.add(new mvc.dto.RubroDTO(r.getCodigo(), r.getDescripcion(), r.isActivo()));
         }
         dialog.actualizarTabla(dtos);
+    }
+
+    private void abrirVentanaCertificados() {
+        String cuit = vista.getCuitSeleccionadoEnTabla();
+        if (cuit == null) {
+            vista.mostrarMensaje("Seleccione un proveedor de la tabla.", "Atención", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        Proveedor p = sistema.buscarProveedorPorCuit(cuit);
+        // Abrimos el JDialog
+        new CertificadosProveedorGUI(null, cuit, p.getRazonSocial()).setVisible(true);
+    }
+
+    private void abrirVentanaPrecios() {
+        String cuit = vista.getCuitSeleccionadoEnTabla();
+        if (cuit == null) {
+            vista.mostrarMensaje("Seleccione un proveedor de la tabla.", "Atención", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        Proveedor p = sistema.buscarProveedorPorCuit(cuit);
+        // Abrimos el JDialog
+        new PreciosAcordadosGUI(null, cuit, p.getRazonSocial()).setVisible(true);
     }
 
 }

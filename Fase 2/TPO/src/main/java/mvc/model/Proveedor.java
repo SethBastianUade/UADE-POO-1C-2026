@@ -1,5 +1,7 @@
 package mvc.model;
 import mvc.enums.CondicionImpositiva;
+import mvc.enums.TipoImpuesto;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +24,7 @@ public class Proveedor {
     
     private List<Rubro> rubros;
     private List<CertificadoExclusion> certificados;
+    private List<ProveedorItem> preciosAcordados = new java.util.ArrayList<>();
 
     // Constructor
     public Proveedor(int idProveedor, String cuit, String razonSocial, String nombreComercial,
@@ -112,4 +115,38 @@ public class Proveedor {
     public boolean quitarRubro(Rubro rubro) {
         return rubros.remove(rubro);
     }
+
+    public List<CertificadoExclusion> getCertificados() {
+        return certificados;
+    }
+
+    public void agregarCertificado(CertificadoExclusion certificado) {
+        this.certificados.add(certificado);
+    }
+
+    public boolean tieneExclusionActiva(TipoImpuesto tipo, LocalDate fecha) {
+        for (CertificadoExclusion cert : certificados) {
+            if (cert.getTipoImpuesto() == tipo && cert.estaVigente(fecha)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public List<ProveedorItem> getPreciosAcordados() {
+        return preciosAcordados;
+    }
+
+    public void acordarPrecioItem(Item item, double precio) {
+        // Si ya existía un acuerdo para ese ítem, lo actualizamos
+        for (ProveedorItem pi : preciosAcordados) {
+            if (pi.getItem().getCodigo().equals(item.getCodigo())) {
+                pi.setPrecioAcordado(precio);
+                return;
+            }
+        }
+        // Si no existía, creamos uno nuevo
+        preciosAcordados.add(new ProveedorItem(item, precio, LocalDate.now()));
+    }
+
 }

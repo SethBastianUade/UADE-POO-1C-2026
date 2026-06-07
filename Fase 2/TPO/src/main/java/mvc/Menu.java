@@ -25,7 +25,11 @@ public class Menu {
 
         private void crearMenu() {
             JMenuBar barraMenu = new JMenuBar();
-            JMenu menuCatalogos = new JMenu("Maestros");
+            JMenu menuCatalogos = new JMenu("Módulo de Catálogos");
+            JMenu menuProveedores = new JMenu("Módulo de Proveedores");
+            JMenu menuCompras = new JMenu("Módulo de Compras");
+            JMenu menuFacturacionPagos = new JMenu("Módulo de Facturación y Pagos");
+            
             JMenuItem itemRubros = new JMenuItem("Gestionar Rubros");
             JMenuItem itemProductoServicio = new JMenuItem("Gestionar Productos/Servicios - Rubros");
             JMenuItem itemProveedor = new JMenuItem("Gestionar Proveedores");
@@ -37,8 +41,9 @@ public class Menu {
 
             menuCatalogos.add(itemRubros);
             menuCatalogos.add(itemProductoServicio);
-            menuCatalogos.add(itemProveedor);
+            menuProveedores.add(itemProveedor);
             barraMenu.add(menuCatalogos);
+            barraMenu.add(menuProveedores);
             setJMenuBar(barraMenu);
         }
 

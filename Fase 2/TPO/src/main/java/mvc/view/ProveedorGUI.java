@@ -10,7 +10,7 @@ import java.util.List;
 public class ProveedorGUI extends JInternalFrame{
     private JTextField txtCuit, txtRazonSocial, txtTelefono, txtCorreo, txtLimiteDeuda;
     private JComboBox<CondicionImpositiva> cbCondicion;
-    private JButton btnGuardar, btnModificar, btnCambiarEstado, btnLimpiar, btnAsociarRubros;
+    private JButton btnGuardar, btnModificar, btnCambiarEstado, btnLimpiar, btnAsociarRubros,btnCertificados,btnPreciosAcordados;
     private JTable tablaProveedores;
     private DefaultTableModel modeloTabla;
 
@@ -60,6 +60,8 @@ public class ProveedorGUI extends JInternalFrame{
         btnCambiarEstado = new JButton("Activar / Desactivar");
         btnLimpiar = new JButton("Limpiar");
         btnAsociarRubros = new JButton("Asociar Rubros");
+        btnCertificados = new JButton("Certificados Exclusión");
+        btnPreciosAcordados = new JButton("Precios Acordados");
         
 
         btnModificar.setEnabled(false);
@@ -69,6 +71,8 @@ public class ProveedorGUI extends JInternalFrame{
         panelBotones.add(btnCambiarEstado);
         panelBotones.add(btnLimpiar);
         panelBotones.add(btnAsociarRubros);
+        panelBotones.add(btnCertificados);
+        panelBotones.add(btnPreciosAcordados);
 
         JPanel panelNorte = new JPanel(new BorderLayout());
         panelNorte.add(panelForm, BorderLayout.CENTER);
@@ -100,6 +104,8 @@ public class ProveedorGUI extends JInternalFrame{
     public JButton getBtnCambiarEstado() { return btnCambiarEstado; }
     public JButton getBtnLimpiar() { return btnLimpiar; }
     public JButton getBtnAsociarRubros() { return btnAsociarRubros; }
+    public JButton getBtnCertificados() { return btnCertificados; }
+    public JButton getBtnPreciosAcordados() { return btnPreciosAcordados; }
     public JTable getTablaProveedores() { return tablaProveedores; }
 
     public String getCuitSeleccionadoEnTabla() {

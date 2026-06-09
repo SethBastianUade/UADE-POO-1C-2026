@@ -5,6 +5,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class Usuario {
+    // Acciones que requieren rol SUPERVISOR (usar estas constantes desde los controllers)
+    public static final String APROBAR_OC = "APROBAR_OC";
+    public static final String APROBAR_DOCUMENTO = "APROBAR_DOCUMENTO";
+
     private String nombreUsuario;
     private String passwordHash;
     private String nombre;
@@ -26,8 +30,15 @@ public class Usuario {
     }
 
     public boolean tienePermiso(String accion) {
-        // TODO: implementar lógica de permisos según rol
-        return true;
+        if (!activo) {
+            return false;
+        }
+        if (rol == RolUsuario.SUPERVISOR) {
+            return true;
+        }
+        // OPERADOR: puede crear OC, registrar documentos y generar OP,
+        // pero no aprobar OC en PENDIENTE_APROBACION ni documentos OBSERVADOS
+        return !APROBAR_OC.equals(accion) && !APROBAR_DOCUMENTO.equals(accion);
     }
 
     public String getNombreUsuario() { return nombreUsuario; }

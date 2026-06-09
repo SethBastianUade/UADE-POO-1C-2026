@@ -34,6 +34,60 @@ public class OrdenDeCompra {
         return lineas.stream().mapToDouble(LineaOrdenCompra::getSubtotal).sum();
     }
 
+    public void agregarLinea(LineaOrdenCompra linea) {
+        lineas.add(linea);
+    }
+
+    public boolean estaEditable() {
+        return estado == EstadoOrdenCompra.BORRADOR;
+    }
+
+    // Una OC ampara facturas mientras esté emitida (total o parcialmente recibida)
+    public boolean amparaFacturacion() {
+        return estado == EstadoOrdenCompra.EMITIDA || estado == EstadoOrdenCompra.RECIBIDA_PARCIALMENTE;
+    }
+
+    public boolean incluyeRubro(Rubro rubro) {
+        for (LineaOrdenCompra linea : lineas) {
+            if (linea.getItem().getRubro() == rubro) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Control de límite de crédito: recibe la deuda ya calculada por el Proveedor
+    // porque la OC no conoce los documentos comerciales del sistema
+    public EstadoOrdenCompra confirmar(double deudaActualProveedor) {
+        if (estado != EstadoOrdenCompra.BORRADOR) {
+            return estado;
+        }
+        double montoComprometido = deudaActualProveedor + calcularTotal();
+        if (montoComprometido <= proveedor.getLimiteDeudaAutorizado()) {
+            this.estado = EstadoOrdenCompra.EMITIDA;
+        } else {
+            this.estado = EstadoOrdenCompra.PENDIENTE_APROBACION;
+        }
+        return this.estado;
+    }
+
+    public boolean aprobar(Usuario supervisor) {
+        if (estado != EstadoOrdenCompra.PENDIENTE_APROBACION || !supervisor.esSupervisor()) {
+            return false;
+        }
+        this.estado = EstadoOrdenCompra.EMITIDA;
+        this.supervisorAprobador = supervisor;
+        return true;
+    }
+
+    public boolean cancelar() {
+        if (estado == EstadoOrdenCompra.BORRADOR || estado == EstadoOrdenCompra.PENDIENTE_APROBACION) {
+            this.estado = EstadoOrdenCompra.CANCELADA;
+            return true;
+        }
+        return false;
+    }
+
     public EstadoOrdenCompra getEstado() { return estado; }
     public void setEstado(EstadoOrdenCompra nuevoEstado) { this.estado = nuevoEstado; }
 

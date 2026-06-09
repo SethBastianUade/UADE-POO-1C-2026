@@ -17,6 +17,9 @@ public class NotaDeCredito extends DocumentoComercial {
     @Override
     public String getTipoDocumento() { return "NOTA_DE_CREDITO"; }
 
+    @Override
+    public double getImpactoDeuda() { return -getSaldoPendiente(); }
+
     public String getMotivoCredito() { return motivoCredito; }
     public void setMotivoCredito(String motivoCredito) { this.motivoCredito = motivoCredito; }
     public Factura getFacturaOrigen() { return facturaOrigen; }

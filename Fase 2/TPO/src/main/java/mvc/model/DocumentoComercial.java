@@ -37,6 +37,10 @@ public abstract class DocumentoComercial {
 
     public double getSaldoPendiente() { return importeTotal - montoPagado; }
 
+    // Cuánto aporta este documento a la deuda con el proveedor.
+    // NotaDeCredito lo sobrescribe con signo negativo (un crédito resta deuda).
+    public double getImpactoDeuda() { return getSaldoPendiente(); }
+
     public void aplicarPago(double monto) {
         this.montoPagado += monto;
         if (montoPagado >= importeTotal) {
@@ -48,6 +52,47 @@ public abstract class DocumentoComercial {
 
     public boolean estaCancelado() {
         return this.estadoCancelacion == EstadoCancelacionDocumento.CANCELADO;
+    }
+
+    public void agregarLinea(LineaDocumento linea) {
+        lineas.add(linea);
+    }
+
+    // Valida el documento contra las OC del proveedor y actualiza estadoRegistro:
+    // cada línea debe estar amparada por una OC emitida que contenga el ítem
+    // con el mismo precio acordado. Recibe las OC porque el documento no
+    // conoce la lista global del sistema.
+    public EstadoRegistroDocumento validarContraOC(List<OrdenDeCompra> ocsDelProveedor) {
+        boolean todoAmparado = !lineas.isEmpty();
+        for (LineaDocumento linea : lineas) {
+            boolean lineaAmparada = false;
+            for (OrdenDeCompra oc : ocsDelProveedor) {
+                if (!oc.amparaFacturacion()) {
+                    continue;
+                }
+                LineaOrdenCompra lineaOC = oc.getLineaPorItem(linea.getItem().getIdItem());
+                if (lineaOC != null && lineaOC.getPrecioUnitarioAcordado() == linea.getPrecioUnitario()) {
+                    lineaAmparada = true;
+                    if (!ordenesDeCompra.contains(oc)) {
+                        ordenesDeCompra.add(oc); // vincula la OC que ampara al documento
+                    }
+                    break;
+                }
+            }
+            if (!lineaAmparada) {
+                todoAmparado = false;
+            }
+        }
+        this.estadoRegistro = todoAmparado ? EstadoRegistroDocumento.APROBADO : EstadoRegistroDocumento.OBSERVADO;
+        return this.estadoRegistro;
+    }
+
+    public boolean aprobar(Usuario supervisor) {
+        if (estadoRegistro != EstadoRegistroDocumento.OBSERVADO || !supervisor.esSupervisor()) {
+            return false;
+        }
+        this.estadoRegistro = EstadoRegistroDocumento.APROBADO;
+        return true;
     }
 
     public int getIdDocumento() { return idDocumento; }

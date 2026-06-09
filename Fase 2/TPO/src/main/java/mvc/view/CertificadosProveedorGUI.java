@@ -23,8 +23,7 @@ public class CertificadosProveedorGUI extends JDialog{
         setLayout(new BorderLayout(10, 10));
 
         inicializarComponentes();
-        
-        
+
         new CertificadoController(this);
     }
 

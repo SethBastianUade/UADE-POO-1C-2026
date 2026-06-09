@@ -11,7 +11,7 @@ public class CertificadoController {
     private CertificadosProveedorGUI vista;
     private SistemaCompras sistema;
 
-    public void CertificadosController(CertificadosProveedorGUI vista) {
+    public CertificadoController(CertificadosProveedorGUI vista) {
         this.vista = vista;
         this.sistema = SistemaCompras.getInstance();
 

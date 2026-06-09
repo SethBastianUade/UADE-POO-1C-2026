@@ -1,5 +1,6 @@
 package mvc.model;
 import mvc.enums.CondicionImpositiva;
+import mvc.enums.EstadoCancelacionDocumento;
 import mvc.enums.TipoImpuesto;
 
 import java.time.LocalDate;
@@ -7,6 +8,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Proveedor {
+    // Alícuotas de retención según condición impositiva (regla de negocio del TPO)
+    private static final double PORC_IVA_RESP_INSCRIPTO = 10.5;
+    private static final double PORC_GANANCIAS_RESP_INSCRIPTO = 3.0;
+    private static final double PORC_IIBB_RESP_INSCRIPTO = 2.5;
+    private static final double PORC_IIBB_MONOTRIBUTISTA = 1.0;
+    // Mínimos no imponibles por impuesto (IVA no tiene MNI)
+    private static final double MNI_GANANCIAS = 150000.0;
+    private static final double MNI_IIBB = 50000.0;
 
     private int idProveedor;
     private String cuit;
@@ -54,13 +63,72 @@ public class Proveedor {
     }
 
     // Métodos de negocio
-    public double calcularDeudaActual() {
-        // TODO: sumar documentos comerciales pendientes de pago
-        return 0.0;
+    // Recibe la lista de documentos del sistema porque el Proveedor no la posee;
+    // la regla de qué documentos forman su deuda sí es responsabilidad del Proveedor.
+    public double calcularDeudaActual(List<DocumentoComercial> documentos) {
+        double deuda = 0.0;
+        for (DocumentoComercial doc : documentos) {
+            boolean esDeEsteProveedor = doc.getProveedor() == this;
+            boolean estaImpago = doc.getEstadoCancelacion() == EstadoCancelacionDocumento.PENDIENTE
+                    || doc.getEstadoCancelacion() == EstadoCancelacionDocumento.PARCIALMENTE_CANCELADO;
+            if (esDeEsteProveedor && estaImpago) {
+                // Impacto polimórfico: facturas/ND suman su saldo pendiente,
+                // las notas de crédito lo restan
+                deuda += doc.getImpactoDeuda();
+            }
+        }
+        return deuda;
     }
 
-    public double calcularMontoComprometido(double montoNuevaOC) {
-        return calcularDeudaActual() + montoNuevaOC;
+    public double calcularMontoComprometido(List<DocumentoComercial> documentos, double montoNuevaOC) {
+        return calcularDeudaActual(documentos) + montoNuevaOC;
+    }
+
+    // Cálculo de retenciones para un pago a este proveedor.
+    // El Proveedor es quien posee la condición impositiva y los certificados
+    // de exclusión, por eso la regla vive acá y no en SistemaCompras.
+    public List<Retencion> calcularRetenciones(double baseImponible, LocalDate fecha) {
+        List<Retencion> retenciones = new ArrayList<>();
+        for (TipoImpuesto tipo : TipoImpuesto.values()) {
+            // PASO 1: si hay certificado de exclusión vigente, NO se retiene este impuesto
+            if (tieneExclusionActiva(tipo, fecha)) {
+                continue;
+            }
+            // PASO 2: alícuota según la condición impositiva del proveedor
+            double porcentaje = porcentajeRetencion(tipo);
+            if (porcentaje <= 0) {
+                continue; // no corresponde retener este impuesto
+            }
+            // PASO 3: la Retencion aplica el MNI: max(0, base - MNI) * (porcentaje / 100)
+            retenciones.add(new Retencion(tipo, baseImponible, porcentaje, mniPara(tipo)));
+        }
+        return retenciones;
+    }
+
+    private double porcentajeRetencion(TipoImpuesto tipo) {
+        switch (condicionImpositiva) {
+            case MONOTRIBUTISTA:
+                return (tipo == TipoImpuesto.IIBB) ? PORC_IIBB_MONOTRIBUTISTA : 0.0;
+            case EXENTO:
+                return 0.0;
+            // RESPONSABLE_INSCRIPTO; a NO_CATEGORIZADO se le aplican las
+            // mismas alícuotas máximas (criterio conservador)
+            default:
+                switch (tipo) {
+                    case IVA: return PORC_IVA_RESP_INSCRIPTO;
+                    case GANANCIAS: return PORC_GANANCIAS_RESP_INSCRIPTO;
+                    case IIBB: return PORC_IIBB_RESP_INSCRIPTO;
+                    default: return 0.0;
+                }
+        }
+    }
+
+    private double mniPara(TipoImpuesto tipo) {
+        switch (tipo) {
+            case GANANCIAS: return MNI_GANANCIAS;
+            case IIBB: return MNI_IIBB;
+            default: return 0.0; // IVA no tiene mínimo no imponible
+        }
     }
 
     // Getters y Setters
@@ -135,6 +203,15 @@ public class Proveedor {
 
     public List<ProveedorItem> getPreciosAcordados() {
         return preciosAcordados;
+    }
+
+    public ProveedorItem getPrecioAcordadoPara(Item item) {
+        for (ProveedorItem pi : preciosAcordados) {
+            if (pi.getItem().getCodigo().equalsIgnoreCase(item.getCodigo())) {
+                return pi;
+            }
+        }
+        return null;
     }
 
     public void acordarPrecioItem(Item item, double precio) {

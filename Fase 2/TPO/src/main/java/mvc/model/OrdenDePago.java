@@ -41,6 +41,38 @@ public class OrdenDePago {
         return calcularTotalBruto() - calcularTotalRetenido();
     }
 
+    public boolean usaMedioDePago(String tipo) {
+        for (MedioDePago medio : mediosDePago) {
+            if (medio.getTipo().equals(tipo)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void agregarDocumentoPago(DocumentoPago documentoPago) {
+        documentosPago.add(documentoPago);
+    }
+
+    public void agregarRetencion(Retencion retencion) {
+        retenciones.add(retencion);
+    }
+
+    public void agregarMedioDePago(MedioDePago medioDePago) {
+        mediosDePago.add(medioDePago);
+    }
+
+    // Emite la OP: aplica el pago a cada documento asociado (lo que actualiza
+    // su estado de cancelación) y deja registrados los totales definitivos
+    public void emitir() {
+        for (DocumentoPago dp : documentosPago) {
+            dp.getDocumentoComercial().aplicarPago(dp.getMontoAplicado());
+        }
+        this.totalBrutoPagado = calcularTotalBruto();
+        this.totalRetenido = calcularTotalRetenido();
+        this.totalNetoPagar = calcularNeto();
+    }
+
     public int getIdOP() { return idOP; }
     public void setIdOP(int idOP) { this.idOP = idOP; }
     public String getNumeroOP() { return numeroOP; }

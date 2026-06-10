@@ -86,7 +86,7 @@ public class Proveedor {
 
     // Cálculo de retenciones para un pago a este proveedor.
     // El Proveedor es quien posee la condición impositiva y los certificados
-    // de exclusión, por eso la regla vive acá y no en SistemaCompras.
+    // de exclusión, por eso la regla vive acá y no en el controller.
     public List<Retencion> calcularRetenciones(double baseImponible, LocalDate fecha) {
         List<Retencion> retenciones = new ArrayList<>();
         for (TipoImpuesto tipo : TipoImpuesto.values()) {

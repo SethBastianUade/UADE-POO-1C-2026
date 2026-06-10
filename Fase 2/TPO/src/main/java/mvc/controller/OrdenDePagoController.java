@@ -15,7 +15,6 @@ import mvc.model.MedioDePago;
 import mvc.model.OrdenDePago;
 import mvc.model.Proveedor;
 import mvc.model.Retencion;
-import mvc.model.SistemaCompras;
 import mvc.model.TransferenciaBancaria;
 import mvc.model.Usuario;
 import mvc.view.OrdenDePagoGUI;
@@ -27,11 +26,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class OrdenDePagoController {
+    // ============================================================
+    // DATOS DEL MÓDULO: ÓRDENES DE PAGO (compartidos por toda la app)
+    // ============================================================
+    private static final List<OrdenDePago> ordenesDePago = new ArrayList<>();
+    private static int contadorIdOP = 1;
+
     // Tolerancia para comparar importes en double (1 centavo)
     private static final double TOLERANCIA = 0.01;
 
     private OrdenDePagoGUI vista;
-    private SistemaCompras sistema;
     // Medios de pago cargados para la OP en construcción
     private List<MedioDePago> mediosPendientes = new ArrayList<>();
     private int contadorIdMedios = 1;
@@ -40,7 +44,6 @@ public class OrdenDePagoController {
 
     public OrdenDePagoController(OrdenDePagoGUI vista) {
         this.vista = vista;
-        this.sistema = SistemaCompras.getInstance();
 
         this.vista.getCbProveedor().addActionListener(e -> cambiarProveedor());
         this.vista.getBtnAgregarMedio().addActionListener(e -> agregarMedioDePago());
@@ -71,7 +74,7 @@ public class OrdenDePagoController {
             return;
         }
         if (vista.isDocumentoIncluidoEnFila(fila) && vista.getMontoAplicarEnFila(fila).isEmpty()) {
-            DocumentoComercial doc = sistema.buscarDocumentoComercial(vista.getNumeroDocumentoEnFila(fila));
+            DocumentoComercial doc = DocumentoComercialController.buscarDocumentoComercial(vista.getNumeroDocumentoEnFila(fila));
             if (doc != null) {
                 vista.setMontoAplicarEnFila(fila, doc.getSaldoPendiente());
             }
@@ -91,7 +94,7 @@ public class OrdenDePagoController {
 
     private Proveedor getProveedorSeleccionado() {
         String cuit = vista.getCuitProveedorSeleccionado();
-        return (cuit != null) ? sistema.buscarProveedorPorCuit(cuit) : null;
+        return (cuit != null) ? ProveedorController.buscarProveedorPorCuit(cuit) : null;
     }
 
     // Suma los montos a aplicar de los documentos marcados (los inválidos cuentan como 0;
@@ -118,7 +121,7 @@ public class OrdenDePagoController {
         List<RetencionDTO> dtos = new ArrayList<>();
         double retenido = 0;
         if (proveedor != null && bruto > 0) {
-            List<Retencion> retenciones = sistema.calcularRetenciones(proveedor, bruto);
+            List<Retencion> retenciones = calcularRetenciones(proveedor, bruto);
             // La vista previa muestra los tres impuestos, incluso los excluidos o sin alícuota
             for (TipoImpuesto tipo : TipoImpuesto.values()) {
                 if (proveedor.tieneExclusionActiva(tipo, LocalDate.now())) {
@@ -240,7 +243,7 @@ public class OrdenDePagoController {
     }
 
     private void emitirOP() {
-        Usuario operador = sistema.getUsuarioLogueado();
+        Usuario operador = LoginController.getUsuarioLogueado();
         if (operador == null) {
             vista.mostrarMensaje("Debe iniciar sesión para emitir una OP.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
@@ -258,7 +261,7 @@ public class OrdenDePagoController {
                 continue;
             }
             String numero = vista.getNumeroDocumentoEnFila(fila);
-            DocumentoComercial doc = sistema.buscarDocumentoComercial(numero);
+            DocumentoComercial doc = DocumentoComercialController.buscarDocumentoComercial(numero);
             double monto;
             try {
                 monto = Double.parseDouble(vista.getMontoAplicarEnFila(fila));
@@ -288,7 +291,7 @@ public class OrdenDePagoController {
             bruto += dp.getMontoAplicado();
         }
         double retenido = 0;
-        for (Retencion r : sistema.calcularRetenciones(proveedor, bruto)) {
+        for (Retencion r : calcularRetenciones(proveedor, bruto)) {
             retenido += r.getMontoRetenido();
         }
         double neto = bruto - retenido;
@@ -302,8 +305,8 @@ public class OrdenDePagoController {
             return;
         }
 
-        // 3. Emitir: el sistema calcula las retenciones definitivas y aplica los pagos
-        OrdenDePago op = sistema.emitirOrdenDePago(proveedor, documentosPago, mediosPendientes, operador);
+        // 3. Emitir: se calculan las retenciones definitivas y se aplican los pagos
+        OrdenDePago op = emitirOrdenDePago(proveedor, documentosPago, mediosPendientes, operador);
 
         vista.mostrarMensaje(String.format(
                 "OP %s emitida correctamente.%n%nTotal bruto: $%.2f%nTotal retenido: $%.2f%nNeto pagado: $%.2f%n%n"
@@ -322,7 +325,7 @@ public class OrdenDePagoController {
 
     private void cargarComboProveedores() {
         List<ProveedorDTO> proveedores = new ArrayList<>();
-        for (Proveedor p : sistema.getProveedores()) {
+        for (Proveedor p : ProveedorController.getProveedores()) {
             if (p.isActivo()) {
                 proveedores.add(new ProveedorDTO(p.getCuit(), p.getRazonSocial(),
                         p.getCondicionImpositiva().toString(), p.getLimiteDeudaAutorizado(), p.isActivo()));
@@ -335,7 +338,7 @@ public class OrdenDePagoController {
         Proveedor proveedor = getProveedorSeleccionado();
         List<DocumentoComercialDTO> dtos = new ArrayList<>();
         if (proveedor != null) {
-            for (DocumentoComercial doc : sistema.getDocumentosPendientes(proveedor)) {
+            for (DocumentoComercial doc : DocumentoComercialController.getDocumentosPendientes(proveedor)) {
                 dtos.add(new DocumentoComercialDTO(
                         doc.getNumeroDocumento(), doc.getTipoDocumento(), doc.getProveedor().getRazonSocial(),
                         doc.getFechaEmision().toString(), doc.getImporteTotal(), doc.getSaldoPendiente(),
@@ -350,7 +353,7 @@ public class OrdenDePagoController {
         Proveedor proveedor = getProveedorSeleccionado();
         List<OrdenDePagoDTO> dtos = new ArrayList<>();
         if (proveedor != null) {
-            for (OrdenDePago op : sistema.getOrdenesDePago(proveedor)) {
+            for (OrdenDePago op : getOrdenesDePago(proveedor)) {
                 dtos.add(new OrdenDePagoDTO(
                         op.getNumeroOP(), op.getProveedor().getRazonSocial(), op.getFechaEmision().toString(),
                         op.getTotalBrutoPagado(), op.getTotalRetenido(), op.getTotalNetoPagar(),
@@ -359,5 +362,75 @@ public class OrdenDePagoController {
             }
         }
         vista.actualizarTablaOP(dtos);
+    }
+
+    // ============================================================
+    // LÓGICA DE NEGOCIO DEL MÓDULO (antes en SistemaCompras)
+    // ============================================================
+    // Delegación: el Proveedor es quien conoce su condición impositiva
+    // y sus certificados de exclusión vigentes
+    public static List<Retencion> calcularRetenciones(Proveedor proveedor, double montoTotal) {
+        return proveedor.calcularRetenciones(montoTotal, LocalDate.now());
+    }
+
+    public static OrdenDePago emitirOrdenDePago(Proveedor proveedor, List<DocumentoPago> documentosPago,
+                                                List<MedioDePago> mediosPago, Usuario operador) {
+        String numero = String.format("OP-%05d", contadorIdOP);
+        OrdenDePago op = new OrdenDePago(contadorIdOP, numero, LocalDate.now(), operador, proveedor);
+        contadorIdOP++;
+
+        for (DocumentoPago dp : documentosPago) {
+            op.agregarDocumentoPago(dp);
+        }
+        // Las retenciones se calculan sobre el total bruto de la OP,
+        // aplicando primero las exclusiones vigentes del proveedor
+        for (Retencion retencion : proveedor.calcularRetenciones(op.calcularTotalBruto(), LocalDate.now())) {
+            op.agregarRetencion(retencion);
+        }
+        for (MedioDePago medio : mediosPago) {
+            op.agregarMedioDePago(medio);
+        }
+
+        op.emitir(); // aplica los pagos a los documentos y fija los totales
+        ordenesDePago.add(op);
+        return op;
+    }
+
+    public static List<OrdenDePago> getOrdenesDePago() {
+        return ordenesDePago;
+    }
+
+    public static List<OrdenDePago> getOrdenesDePago(Proveedor proveedor) {
+        List<OrdenDePago> resultado = new ArrayList<>();
+        for (OrdenDePago op : ordenesDePago) {
+            if (op.getProveedor() == proveedor) {
+                resultado.add(op);
+            }
+        }
+        return resultado;
+    }
+
+    // Búsqueda con filtros para las consultas; null significa "sin filtro"
+    public static List<OrdenDePago> buscarOrdenesDePago(LocalDate desde, LocalDate hasta, String tipoMedioFiltro, Proveedor proveedorFiltro) {
+        List<OrdenDePago> resultado = new ArrayList<>();
+        for (OrdenDePago op : ordenesDePago) {
+            boolean cumpleDesde = (desde == null) || !op.getFechaEmision().isBefore(desde);
+            boolean cumpleHasta = (hasta == null) || !op.getFechaEmision().isAfter(hasta);
+            boolean cumpleMedio = (tipoMedioFiltro == null) || op.usaMedioDePago(tipoMedioFiltro);
+            boolean cumpleProveedor = (proveedorFiltro == null) || op.getProveedor() == proveedorFiltro;
+            if (cumpleDesde && cumpleHasta && cumpleMedio && cumpleProveedor) {
+                resultado.add(op);
+            }
+        }
+        return resultado;
+    }
+
+    // Retenciones de todas las OP emitidas dentro del período
+    public static List<Retencion> getRetencionesPorPeriodo(LocalDate desde, LocalDate hasta) {
+        List<Retencion> resultado = new ArrayList<>();
+        for (OrdenDePago op : buscarOrdenesDePago(desde, hasta, null, null)) {
+            resultado.addAll(op.getRetenciones());
+        }
+        return resultado;
     }
 }

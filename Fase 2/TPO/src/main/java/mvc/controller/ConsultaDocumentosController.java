@@ -5,7 +5,6 @@ import mvc.dto.ProveedorDTO;
 import mvc.dto.TotalDiarioDTO;
 import mvc.model.DocumentoComercial;
 import mvc.model.Proveedor;
-import mvc.model.SistemaCompras;
 import mvc.view.ConsultaDocumentosGUI;
 
 import javax.swing.JOptionPane;
@@ -18,11 +17,9 @@ import java.util.TreeMap;
 
 public class ConsultaDocumentosController {
     private ConsultaDocumentosGUI vista;
-    private SistemaCompras sistema;
 
     public ConsultaDocumentosController(ConsultaDocumentosGUI vista) {
         this.vista = vista;
-        this.sistema = SistemaCompras.getInstance();
 
         this.vista.getBtnBuscar().addActionListener(e -> buscar());
 
@@ -40,9 +37,9 @@ public class ConsultaDocumentosController {
             return;
         }
         String cuit = vista.getCuitProveedorFiltro();
-        Proveedor proveedor = (cuit != null) ? sistema.buscarProveedorPorCuit(cuit) : null;
+        Proveedor proveedor = (cuit != null) ? ProveedorController.buscarProveedorPorCuit(cuit) : null;
 
-        List<DocumentoComercial> documentos = sistema.getDocumentosPorPeriodo(desde, hasta, proveedor);
+        List<DocumentoComercial> documentos = DocumentoComercialController.getDocumentosPorPeriodo(desde, hasta, proveedor);
 
         // Detalle
         List<DocumentoComercialDTO> dtos = new ArrayList<>();
@@ -77,7 +74,7 @@ public class ConsultaDocumentosController {
 
     private void cargarComboProveedores() {
         List<ProveedorDTO> proveedores = new ArrayList<>();
-        for (Proveedor p : sistema.getProveedores()) {
+        for (Proveedor p : ProveedorController.getProveedores()) {
             proveedores.add(new ProveedorDTO(p.getCuit(), p.getRazonSocial(),
                     p.getCondicionImpositiva().toString(), p.getLimiteDeudaAutorizado(), p.isActivo()));
         }

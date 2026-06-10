@@ -1,30 +1,35 @@
 package mvc.controller;
 import mvc.dto.ProveedorDTO;
 import mvc.enums.CondicionImpositiva;
+import mvc.enums.TipoImpuesto;
+import mvc.model.CertificadoExclusion;
+import mvc.model.Item;
 import mvc.model.Proveedor;
-import mvc.model.SistemaCompras;
+import mvc.model.Rubro;
 import mvc.view.ProveedorGUI;
-import mvc.view.AsociarProveedorRubroGUI;
-import mvc.view.CertificadosProveedorGUI;
-import mvc.view.PreciosAcordadosGUI;
 
 import javax.swing.JOptionPane;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ProveedorController {
+    // ============================================================
+    // DATOS DEL MÓDULO: PROVEEDORES (compartidos por toda la app)
+    // ============================================================
+    private static final List<Proveedor> proveedores = new ArrayList<>();
+    private static int contadorIdProveedores = 1;
+
     private ProveedorGUI vista;
-    private SistemaCompras sistema;
 
     public ProveedorController(ProveedorGUI vista) {
         this.vista = vista;
-        this.sistema = SistemaCompras.getInstance();
 
         // Eventos de botones
         this.vista.getBtnGuardar().addActionListener(e -> guardarProveedor());
-        this.vista.getBtnModificar().addActionListener(e -> modificarProveedor());
+        this.vista.getBtnModificar().addActionListener(e -> modificarProveedorDesdeVista());
         this.vista.getBtnCambiarEstado().addActionListener(e -> cambiarEstado());
         this.vista.getBtnLimpiar().addActionListener(e -> vista.limpiarFormulario());
         this.vista.getBtnAsociarRubros().addActionListener(e -> abrirVentanaRubros());
@@ -58,21 +63,21 @@ public class ProveedorController {
                 return;
             }
 
-            if (sistema.buscarProveedorPorCuit(cuit) != null) {
+            if (buscarProveedorPorCuit(cuit) != null) {
                 vista.mostrarMensaje("Ya existe un proveedor con este CUIT.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            sistema.agregarProveedor(
-                cuit, 
-                razon, 
-                razon,               
+            agregarProveedor(
+                cuit,
+                razon,
+                razon,
                 "No especificado",
-                tel, 
-                correo, 
-                cond, 
+                tel,
+                correo,
+                cond,
                 "Pendiente",
-                java.time.LocalDate.now(),
+                LocalDate.now(),
                 limite
             );
             vista.limpiarFormulario();
@@ -87,24 +92,24 @@ public class ProveedorController {
     private void cargarDatosParaEdicion() {
         String cuit = vista.getCuitSeleccionadoEnTabla();
         if (cuit != null) {
-            Proveedor p = sistema.buscarProveedorPorCuit(cuit);
+            Proveedor p = buscarProveedorPorCuit(cuit);
             if (p != null) {
-                vista.setDatosFormulario(p.getCuit(), p.getRazonSocial(), p.getTelefono(), 
+                vista.setDatosFormulario(p.getCuit(), p.getRazonSocial(), p.getTelefono(),
                                          p.getCorreoElectronico(), p.getCondicionImpositiva(), p.getLimiteDeudaAutorizado());
             }
         }
     }
 
-    private void modificarProveedor() {
+    private void modificarProveedorDesdeVista() {
         try {
-            String cuit = vista.getCuit(); 
+            String cuit = vista.getCuit();
             String razon = vista.getRazonSocial();
             String tel = vista.getTelefono();
             String correo = vista.getCorreo();
             double limite = Double.parseDouble(vista.getLimiteDeuda());
             CondicionImpositiva cond = vista.getCondicionSeleccionada();
 
-            if (sistema.modificarProveedor(cuit, razon, tel, correo, cond, limite)) {
+            if (modificarProveedor(cuit, razon, tel, correo, cond, limite)) {
                 vista.limpiarFormulario();
                 vista.mostrarMensaje("Proveedor actualizado.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                 cargarTabla();
@@ -123,7 +128,7 @@ public class ProveedorController {
 
         int resp = JOptionPane.showConfirmDialog(vista, "¿Desea cambiar el estado de este proveedor?", "Confirmar", JOptionPane.YES_NO_OPTION);
         if (resp == JOptionPane.YES_OPTION) {
-            sistema.cambiarEstadoProveedor(cuit);
+            cambiarEstadoProveedor(cuit);
             vista.limpiarFormulario();
             cargarTabla();
         }
@@ -131,108 +136,149 @@ public class ProveedorController {
 
     private void cargarTabla() {
         List<ProveedorDTO> dtos = new ArrayList<>();
-        for (Proveedor p : sistema.getProveedores()) {
+        for (Proveedor p : getProveedores()) {
             dtos.add(new ProveedorDTO(
-                p.getCuit(), 
-                p.getRazonSocial(), 
-                p.getCondicionImpositiva().toString(), 
-                p.getLimiteDeudaAutorizado(), 
+                p.getCuit(),
+                p.getRazonSocial(),
+                p.getCondicionImpositiva().toString(),
+                p.getLimiteDeudaAutorizado(),
                 p.isActivo()
             ));
         }
         vista.actualizarTabla(dtos);
     }
 
+    // Los diálogos los crea la vista: el controller solo valida la selección
+    // y le pide a la vista que los abra
     private void abrirVentanaRubros() {
-        String cuit = vista.getCuitSeleccionadoEnTabla();
-        if (cuit == null) {
-            vista.mostrarMensaje("Por favor, seleccione un proveedor de la tabla.", "Atención", JOptionPane.WARNING_MESSAGE);
-            return;
+        Proveedor p = getProveedorSeleccionado();
+        if (p != null) {
+            vista.abrirDialogoAsociarRubros(p.getCuit(), p.getRazonSocial());
         }
-
-        Proveedor proveedorActual = sistema.buscarProveedorPorCuit(cuit);
-        
-        // 1. Instanciamos el diálogo pasándole un Frame dummy como padre para que se centre
-        AsociarProveedorRubroGUI dialog = new AsociarProveedorRubroGUI(null, proveedorActual.getRazonSocial());
-
-        // 2. Llenamos el desplegable con TODOS los rubros del sistema
-        dialog.cargarComboRubros(sistema.getRubros());
-
-        // 3. Llenamos la tablita con los rubros que YA TIENE el proveedor
-        refrescarTablaDialogo(dialog, proveedorActual);
-
-        // 4. Le damos vida al botón "Agregar" dentro del diálogo
-        dialog.getBtnAgregarRubro().addActionListener(e -> {
-            mvc.model.Rubro rubroElegido = dialog.getRubroSeleccionado();
-            if (rubroElegido != null) {
-                boolean exito = sistema.asignarRubroAProveedor(cuit, rubroElegido.getCodigo());
-                if (exito) {
-                    // Si se agregó, refrescamos la tablita del diálogo
-                    refrescarTablaDialogo(dialog, proveedorActual);
-                } else {
-                    dialog.mostrarMensaje("El proveedor ya tiene asignado este rubro.");
-                }
-            }
-        });
-
-        dialog.getBtnQuitarRubro().addActionListener(e -> {
-            String codigoRubroSeleccionado = dialog.getCodigoRubroSeleccionadoEnTabla();
-            
-            if (codigoRubroSeleccionado == null) {
-                dialog.mostrarMensaje("Por favor, seleccione un rubro de la tabla inferior para quitar.");
-                return;
-            }
-
-            // Pedimos confirmación por seguridad
-            int confirmacion = javax.swing.JOptionPane.showConfirmDialog(dialog, 
-                "¿Estás seguro de que deseas desvincular este rubro del proveedor?", 
-                "Confirmar", 
-                javax.swing.JOptionPane.YES_NO_OPTION);
-
-            if (confirmacion == javax.swing.JOptionPane.YES_OPTION) {
-                // Llamamos al sistema para que haga el trabajo
-                boolean exito = sistema.desvincularRubroDeProveedor(cuit, codigoRubroSeleccionado);
-                
-                if (exito) {
-                    // Refrescamos la tabla para que el rubro desaparezca visualmente
-                    refrescarTablaDialogo(dialog, proveedorActual);
-                }
-            }
-        });
-        
-        // 5. Mostramos la ventana (El código se "pausa" aquí hasta que el usuario la cierra)
-        dialog.setVisible(true);
-    }
-
-    // Método auxiliar para pintar la tablita del diálogo convirtiendo Modelos a DTOs
-    private void refrescarTablaDialogo(AsociarProveedorRubroGUI dialog, Proveedor proveedor) {
-        List<mvc.dto.RubroDTO> dtos = new ArrayList<>();
-        for (mvc.model.Rubro r : proveedor.getRubrosAsociados()) {
-            dtos.add(new mvc.dto.RubroDTO(r.getCodigo(), r.getDescripcion(), r.isActivo()));
-        }
-        dialog.actualizarTabla(dtos);
     }
 
     private void abrirVentanaCertificados() {
-        String cuit = vista.getCuitSeleccionadoEnTabla();
-        if (cuit == null) {
-            vista.mostrarMensaje("Seleccione un proveedor de la tabla.", "Atención", JOptionPane.WARNING_MESSAGE);
-            return;
+        Proveedor p = getProveedorSeleccionado();
+        if (p != null) {
+            vista.abrirDialogoCertificados(p.getCuit(), p.getRazonSocial());
         }
-        Proveedor p = sistema.buscarProveedorPorCuit(cuit);
-        // Abrimos el JDialog
-        new CertificadosProveedorGUI(null, cuit, p.getRazonSocial()).setVisible(true);
     }
 
     private void abrirVentanaPrecios() {
-        String cuit = vista.getCuitSeleccionadoEnTabla();
-        if (cuit == null) {
-            vista.mostrarMensaje("Seleccione un proveedor de la tabla.", "Atención", JOptionPane.WARNING_MESSAGE);
-            return;
+        Proveedor p = getProveedorSeleccionado();
+        if (p != null) {
+            vista.abrirDialogoPreciosAcordados(p.getCuit(), p.getRazonSocial());
         }
-        Proveedor p = sistema.buscarProveedorPorCuit(cuit);
-        // Abrimos el JDialog
-        new PreciosAcordadosGUI(null, cuit, p.getRazonSocial()).setVisible(true);
     }
 
+    private Proveedor getProveedorSeleccionado() {
+        String cuit = vista.getCuitSeleccionadoEnTabla();
+        if (cuit == null) {
+            vista.mostrarMensaje("Por favor, seleccione un proveedor de la tabla.", "Atención", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+        return buscarProveedorPorCuit(cuit);
+    }
+
+    // ============================================================
+    // LÓGICA DE NEGOCIO DEL MÓDULO (antes en SistemaCompras)
+    // ============================================================
+    public static void agregarProveedor(String cuit, String razonSocial, String nombreComercial, String domicilio, String telefono,
+                                        String correo, CondicionImpositiva condicion, String nroInscripcionIIBB,
+                                        LocalDate fechaInicioActividades, double limite) {
+        Proveedor p = new Proveedor(contadorIdProveedores++, cuit, razonSocial, nombreComercial,
+                domicilio, telefono, correo, condicion, nroInscripcionIIBB, fechaInicioActividades, limite);
+        proveedores.add(p);
+    }
+
+    public static Proveedor buscarProveedorPorCuit(String cuit) {
+        for (Proveedor p : proveedores) {
+            if (p.getCuit().equals(cuit)) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    public static boolean modificarProveedor(String cuit, String razonSocial, String telefono,
+                                             String correo, CondicionImpositiva condicion, double limite) {
+        Proveedor p = buscarProveedorPorCuit(cuit);
+        if (p != null) {
+            p.setRazonSocial(razonSocial);
+            p.setTelefono(telefono);
+            p.setCorreoElectronico(correo);
+            p.setCondicionImpositiva(condicion);
+            p.setLimiteDeudaAutorizado(limite);
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean cambiarEstadoProveedor(String cuit) {
+        Proveedor p = buscarProveedorPorCuit(cuit);
+        if (p != null) {
+            p.setActivo(!p.isActivo());
+            return true;
+        }
+        return false;
+    }
+
+    public static List<Proveedor> getProveedores() {
+        return proveedores;
+    }
+
+    public static boolean asignarRubroAProveedor(String cuitProveedor, String codigoRubro) {
+        Proveedor p = buscarProveedorPorCuit(cuitProveedor);
+        Rubro r = RubroController.buscarRubro(codigoRubro);
+
+        if (p != null && r != null) {
+            return p.agregarRubro(r);
+        }
+        return false;
+    }
+
+    public static boolean desvincularRubroDeProveedor(String cuitProveedor, String codigoRubro) {
+        Proveedor p = buscarProveedorPorCuit(cuitProveedor);
+        Rubro r = RubroController.buscarRubro(codigoRubro);
+
+        if (p != null && r != null) {
+            return p.quitarRubro(r);
+        }
+        return false;
+    }
+
+    public static void agregarCertificadoAProveedor(String cuit, String numero, TipoImpuesto tipo, LocalDate desde, LocalDate hasta) {
+        Proveedor p = buscarProveedorPorCuit(cuit);
+        if (p != null) {
+            // Un id autoincremental simple para el certificado
+            int idCert = p.getCertificados().size() + 1;
+            CertificadoExclusion nuevo = new CertificadoExclusion(idCert, numero, tipo, desde, hasta);
+            p.agregarCertificado(nuevo);
+        }
+    }
+
+    public static void registrarPrecioAcordado(String cuit, String codigoItem, double precio) {
+        Proveedor p = buscarProveedorPorCuit(cuit);
+        Item itemEncontrado = ItemController.buscarItemPorCodigo(codigoItem);
+
+        if (p != null && itemEncontrado != null) {
+            p.acordarPrecioItem(itemEncontrado, precio);
+        }
+    }
+
+    public static List<Proveedor> getProveedoresQueSuministran(Item item) {
+        List<Proveedor> resultado = new ArrayList<>();
+        for (Proveedor p : proveedores) {
+            if (p.getPrecioAcordadoPara(item) != null) {
+                resultado.add(p);
+            }
+        }
+        return resultado;
+    }
+
+    // Atajo para los controllers: delega el cálculo en el Proveedor (dueño de la regla);
+    // los documentos los aporta el módulo de Documentos Comerciales
+    public static double calcularDeudaProveedor(Proveedor proveedor) {
+        return proveedor.calcularDeudaActual(DocumentoComercialController.getDocumentosComerciales());
+    }
 }

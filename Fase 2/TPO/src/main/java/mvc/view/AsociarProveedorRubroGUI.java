@@ -12,15 +12,19 @@ public class AsociarProveedorRubroGUI extends JDialog{
     private JButton btnAgregarRubro,btnQuitarRubro;
     private JTable tablaRubrosAsociados;
     private DefaultTableModel modeloTabla;
+    private String cuitProveedor;
 
-    
-    public AsociarProveedorRubroGUI(Frame owner, String nombreProveedor) {
+
+    public AsociarProveedorRubroGUI(Frame owner, String cuitProveedor, String nombreProveedor) {
         super(owner, "Rubros del Proveedor: " + nombreProveedor, true);
+        this.cuitProveedor = cuitProveedor;
         setSize(600, 300);
         setLocationRelativeTo(owner);
         setLayout(new BorderLayout(10, 10));
 
         inicializarComponentes();
+
+        new mvc.controller.AsociarProveedorRubroController(this);
     }
 
     private void inicializarComponentes() {
@@ -54,6 +58,7 @@ public class AsociarProveedorRubroGUI extends JDialog{
     public JButton getBtnAgregarRubro() { return btnAgregarRubro; }
     public JButton getBtnQuitarRubro() { return btnQuitarRubro; }
     public Rubro getRubroSeleccionado() { return (Rubro) cbRubrosDisponibles.getSelectedItem(); }
+    public String getCuitProveedor() { return cuitProveedor; }
 
     public void cargarComboRubros(List<Rubro> todosLosRubros) {
         cbRubrosDisponibles.removeAllItems();

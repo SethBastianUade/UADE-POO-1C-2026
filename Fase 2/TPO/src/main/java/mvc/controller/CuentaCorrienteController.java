@@ -6,7 +6,6 @@ import mvc.dto.ProveedorDTO;
 import mvc.model.DocumentoComercial;
 import mvc.model.OrdenDePago;
 import mvc.model.Proveedor;
-import mvc.model.SistemaCompras;
 import mvc.view.CuentaCorrienteGUI;
 
 import javax.swing.JOptionPane;
@@ -34,11 +33,9 @@ public class CuentaCorrienteController {
     }
 
     private CuentaCorrienteGUI vista;
-    private SistemaCompras sistema;
 
     public CuentaCorrienteController(CuentaCorrienteGUI vista) {
         this.vista = vista;
-        this.sistema = SistemaCompras.getInstance();
 
         this.vista.getCbProveedor().addActionListener(e -> cargarCuentaCorriente());
         this.vista.getBtnFiltrarPendientes().addActionListener(e -> cargarPendientes());
@@ -49,7 +46,7 @@ public class CuentaCorrienteController {
 
     private Proveedor getProveedorSeleccionado() {
         String cuit = vista.getCuitProveedorSeleccionado();
-        return (cuit != null) ? sistema.buscarProveedorPorCuit(cuit) : null;
+        return (cuit != null) ? ProveedorController.buscarProveedorPorCuit(cuit) : null;
     }
 
     private void cargarCuentaCorriente() {
@@ -63,14 +60,14 @@ public class CuentaCorrienteController {
 
         // Cronología: documentos al debe (NC con signo negativo) y pagos al haber
         List<Movimiento> movimientos = new ArrayList<>();
-        for (DocumentoComercial doc : sistema.getDocumentosComerciales(proveedor)) {
+        for (DocumentoComercial doc : DocumentoComercialController.getDocumentosComerciales(proveedor)) {
             double debe = doc.getTipoDocumento().equals("NOTA_DE_CREDITO")
                     ? -doc.getImporteTotal()
                     : doc.getImporteTotal();
             movimientos.add(new Movimiento(doc.getFechaEmision(), doc.getTipoDocumento(),
                     doc.getNumeroDocumento(), debe, 0));
         }
-        for (OrdenDePago op : sistema.getOrdenesDePago(proveedor)) {
+        for (OrdenDePago op : OrdenDePagoController.getOrdenesDePago(proveedor)) {
             movimientos.add(new Movimiento(op.getFechaEmision(), "ORDEN_DE_PAGO",
                     op.getNumeroOP(), 0, op.getTotalBrutoPagado()));
         }
@@ -85,7 +82,7 @@ public class CuentaCorrienteController {
         }
         vista.actualizarTablaMovimientos(dtos);
 
-        vista.setDeudaActual(sistema.calcularDeudaProveedor(proveedor));
+        vista.setDeudaActual(ProveedorController.calcularDeudaProveedor(proveedor));
         cargarPendientes();
     }
 
@@ -107,7 +104,7 @@ public class CuentaCorrienteController {
         }
 
         List<DocumentoComercialDTO> dtos = new ArrayList<>();
-        for (DocumentoComercial doc : sistema.getDocumentosPendientes(proveedor, dias)) {
+        for (DocumentoComercial doc : DocumentoComercialController.getDocumentosPendientes(proveedor, dias)) {
             dtos.add(new DocumentoComercialDTO(
                     doc.getNumeroDocumento(), doc.getTipoDocumento(), doc.getProveedor().getRazonSocial(),
                     doc.getFechaEmision().toString(), doc.getImporteTotal(), doc.getSaldoPendiente(),
@@ -119,7 +116,7 @@ public class CuentaCorrienteController {
 
     private void cargarComboProveedores() {
         List<ProveedorDTO> proveedores = new ArrayList<>();
-        for (Proveedor p : sistema.getProveedores()) {
+        for (Proveedor p : ProveedorController.getProveedores()) {
             proveedores.add(new ProveedorDTO(p.getCuit(), p.getRazonSocial(),
                     p.getCondicionImpositiva().toString(), p.getLimiteDeudaAutorizado(), p.isActivo()));
         }

@@ -6,7 +6,6 @@ import mvc.enums.TipoImpuesto;
 import mvc.model.DocumentoComercial;
 import mvc.model.Factura;
 import mvc.model.Retencion;
-import mvc.model.SistemaCompras;
 import mvc.view.ReportesFiscalesGUI;
 
 import javax.swing.JOptionPane;
@@ -17,11 +16,9 @@ import java.util.List;
 
 public class ReportesFiscalesController {
     private ReportesFiscalesGUI vista;
-    private SistemaCompras sistema;
 
     public ReportesFiscalesController(ReportesFiscalesGUI vista) {
         this.vista = vista;
-        this.sistema = SistemaCompras.getInstance();
 
         this.vista.getBtnGenerar().addActionListener(e -> generar());
 
@@ -42,7 +39,7 @@ public class ReportesFiscalesController {
     }
 
     private void generarTotalesRetenciones(LocalDate desde, LocalDate hasta) {
-        List<Retencion> retenciones = sistema.getRetencionesPorPeriodo(desde, hasta);
+        List<Retencion> retenciones = OrdenDePagoController.getRetencionesPorPeriodo(desde, hasta);
 
         List<TotalRetenidoDTO> dtos = new ArrayList<>();
         double totalGeneral = 0;
@@ -67,7 +64,7 @@ public class ReportesFiscalesController {
         List<LibroIVACompraDTO> dtos = new ArrayList<>();
         double totalBase = 0, totalIVA = 0, totalGeneral = 0;
 
-        for (DocumentoComercial doc : sistema.getDocumentosPorPeriodo(desde, hasta, null)) {
+        for (DocumentoComercial doc : DocumentoComercialController.getDocumentosPorPeriodo(desde, hasta, null)) {
             double base, iva, total;
             if (doc instanceof Factura) {
                 Factura factura = (Factura) doc;

@@ -5,7 +5,6 @@ import mvc.dto.ItemDTO;
 import mvc.model.Item;
 import mvc.model.Proveedor;
 import mvc.model.ProveedorItem;
-import mvc.model.SistemaCompras;
 import mvc.view.ComparacionPreciosGUI;
 
 import java.util.ArrayList;
@@ -13,11 +12,9 @@ import java.util.List;
 
 public class ComparacionPreciosController {
     private ComparacionPreciosGUI vista;
-    private SistemaCompras sistema;
 
     public ComparacionPreciosController(ComparacionPreciosGUI vista) {
         this.vista = vista;
-        this.sistema = SistemaCompras.getInstance();
 
         this.vista.getCbItem().addActionListener(e -> comparar());
 
@@ -31,13 +28,13 @@ public class ComparacionPreciosController {
             vista.actualizarTabla(new ArrayList<>());
             return;
         }
-        Item item = sistema.buscarItemPorCodigo(codigo);
+        Item item = ItemController.buscarItemPorCodigo(codigo);
         if (item == null) {
             return;
         }
 
         List<ComparacionPrecioDTO> dtos = new ArrayList<>();
-        for (Proveedor proveedor : sistema.getProveedoresQueSuministran(item)) {
+        for (Proveedor proveedor : ProveedorController.getProveedoresQueSuministran(item)) {
             ProveedorItem acuerdo = proveedor.getPrecioAcordadoPara(item);
             dtos.add(new ComparacionPrecioDTO(
                     proveedor.getRazonSocial(), proveedor.getCuit(),
@@ -49,7 +46,7 @@ public class ComparacionPreciosController {
 
     private void cargarComboItems() {
         List<ItemDTO> items = new ArrayList<>();
-        for (Item i : sistema.getItems()) {
+        for (Item i : ItemController.getItems()) {
             items.add(new ItemDTO(i.getCodigo(), i.getDescripcion(), i.getTipoItem(),
                     i.getRubro() != null ? i.getRubro().getDescripcion() : "",
                     i.getPrecioUnitarioBase(), i.isActivo(), "-"));

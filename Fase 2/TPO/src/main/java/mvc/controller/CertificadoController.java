@@ -1,7 +1,6 @@
 package mvc.controller;
 
 import mvc.model.Proveedor;
-import mvc.model.SistemaCompras;
 import mvc.view.CertificadosProveedorGUI;
 import mvc.enums.TipoImpuesto;
 import java.time.LocalDate;
@@ -9,11 +8,9 @@ import javax.swing.JOptionPane;
 
 public class CertificadoController {
     private CertificadosProveedorGUI vista;
-    private SistemaCompras sistema;
 
     public CertificadoController(CertificadosProveedorGUI vista) {
         this.vista = vista;
-        this.sistema = SistemaCompras.getInstance();
 
         this.vista.getBtnAgregar().addActionListener(e -> guardarCertificado());
         refrescarTabla();
@@ -31,7 +28,7 @@ public class CertificadoController {
                 return;
             }
 
-            sistema.agregarCertificadoAProveedor(vista.getCuitProveedor(), numero, tipo, desde, hasta);
+            ProveedorController.agregarCertificadoAProveedor(vista.getCuitProveedor(), numero, tipo, desde, hasta);
             vista.limpiarFormulario();
             JOptionPane.showMessageDialog(vista, "Certificado guardado con éxito.");
             refrescarTabla();
@@ -42,7 +39,7 @@ public class CertificadoController {
     }
 
     private void refrescarTabla() {
-        Proveedor p = sistema.buscarProveedorPorCuit(vista.getCuitProveedor());
+        Proveedor p = ProveedorController.buscarProveedorPorCuit(vista.getCuitProveedor());
         if (p != null) {
             vista.actualizarTabla(p.getCertificados());
         }

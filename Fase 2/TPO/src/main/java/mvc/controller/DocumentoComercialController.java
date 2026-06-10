@@ -9,8 +9,9 @@ import mvc.model.DocumentoComercial;
 import mvc.model.Factura;
 import mvc.model.Item;
 import mvc.model.LineaDocumento;
+import mvc.model.NotaDeCredito;
+import mvc.model.NotaDeDebito;
 import mvc.model.Proveedor;
-import mvc.model.SistemaCompras;
 import mvc.model.Usuario;
 import mvc.view.DocumentoComercialGUI;
 
@@ -21,18 +22,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DocumentoComercialController {
+    // ============================================================
+    // DATOS DEL MÓDULO: DOCUMENTOS COMERCIALES (compartidos por toda la app)
+    // ============================================================
+    private static final List<DocumentoComercial> documentosComerciales = new ArrayList<>();
+    private static int contadorIdDocumentos = 1;
+
     private DocumentoComercialGUI vista;
-    private SistemaCompras sistema;
     // Líneas cargadas en el formulario, a la espera del "Registrar documento"
     private List<LineaDocumento> lineasPendientes = new ArrayList<>();
 
     public DocumentoComercialController(DocumentoComercialGUI vista) {
         this.vista = vista;
-        this.sistema = SistemaCompras.getInstance();
 
         this.vista.getBtnAgregarLinea().addActionListener(e -> agregarLineaPendiente());
         this.vista.getBtnRegistrar().addActionListener(e -> registrarDocumento());
-        this.vista.getBtnAprobar().addActionListener(e -> aprobarDocumento());
+        this.vista.getBtnAprobar().addActionListener(e -> aprobarDocumentoDesdeVista());
         this.vista.getCbProveedor().addActionListener(e -> cargarComboFacturas());
 
         this.vista.getTablaDocumentos().getSelectionModel().addListSelectionListener(e -> {
@@ -60,7 +65,7 @@ public class DocumentoComercialController {
                         "Error", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            Item item = sistema.buscarItemPorCodigo(codigoItem);
+            Item item = ItemController.buscarItemPorCodigo(codigoItem);
             lineasPendientes.add(new LineaDocumento(lineasPendientes.size() + 1, item, cantidad, precio, alicuota));
             vista.limpiarFormularioLinea();
             // La sub-tabla pasa a mostrar las líneas pendientes del documento en carga
@@ -83,7 +88,7 @@ public class DocumentoComercialController {
             vista.mostrarMensaje("El número de documento es obligatorio.", "Atención", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        if (sistema.buscarDocumentoComercial(numero) != null) {
+        if (buscarDocumentoComercial(numero) != null) {
             vista.mostrarMensaje("Ya existe un documento con ese número.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -106,18 +111,18 @@ public class DocumentoComercialController {
             return;
         }
 
-        Proveedor proveedor = sistema.buscarProveedorPorCuit(cuit);
+        Proveedor proveedor = ProveedorController.buscarProveedorPorCuit(cuit);
         String tipo = vista.getTipoSeleccionado();
 
         // 2. Registro según el tipo
         if (tipo.equals("FACTURA")) {
-            registrarFactura(proveedor, numero, fecha, importe);
+            registrarFacturaDesdeVista(proveedor, numero, fecha, importe);
         } else {
             registrarNota(tipo, proveedor, numero, fecha, importe);
         }
     }
 
-    private void registrarFactura(Proveedor proveedor, String numero, LocalDate fecha, double importe) {
+    private void registrarFacturaDesdeVista(Proveedor proveedor, String numero, LocalDate fecha, double importe) {
         String cae = vista.getCae();
         if (cae.isEmpty()) {
             vista.mostrarMensaje("El CAE es obligatorio para una factura.", "Atención", JOptionPane.WARNING_MESSAGE);
@@ -144,11 +149,11 @@ public class DocumentoComercialController {
             return;
         }
 
-        Factura factura = sistema.registrarFactura(proveedor, numero, fecha, importe, cae, fechaCae, baseIVA, montoIVA);
+        Factura factura = registrarFactura(proveedor, numero, fecha, importe, cae, fechaCae, baseIVA, montoIVA);
         volcarLineasPendientes(factura);
 
         // Regla crítica: validación de amparo con OC + control de precios
-        EstadoRegistroDocumento resultado = sistema.validarDocumentoConOC(factura);
+        EstadoRegistroDocumento resultado = validarDocumentoConOC(factura);
         if (resultado == EstadoRegistroDocumento.APROBADO) {
             vista.mostrarMensaje("Factura " + numero + " registrada y APROBADA:\n"
                     + "todos los ítems están amparados por OC emitidas con precios coincidentes.",
@@ -175,13 +180,13 @@ public class DocumentoComercialController {
                     "Atención", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        Factura facturaOrigen = (Factura) sistema.buscarDocumentoComercial(numeroFactura);
+        Factura facturaOrigen = (Factura) buscarDocumentoComercial(numeroFactura);
 
         DocumentoComercial doc;
         if (tipo.equals("NOTA_DE_DEBITO")) {
-            doc = sistema.registrarNotaDeDebito(proveedor, numero, fecha, importe, motivo, facturaOrigen);
+            doc = registrarNotaDeDebito(proveedor, numero, fecha, importe, motivo, facturaOrigen);
         } else {
-            doc = sistema.registrarNotaDeCredito(proveedor, numero, fecha, importe, motivo, facturaOrigen);
+            doc = registrarNotaDeCredito(proveedor, numero, fecha, importe, motivo, facturaOrigen);
         }
         volcarLineasPendientes(doc);
         vista.mostrarMensaje(doc.getTipoDocumento() + " " + numero + " registrada (vinculada a la factura "
@@ -191,7 +196,7 @@ public class DocumentoComercialController {
 
     private void volcarLineasPendientes(DocumentoComercial doc) {
         for (LineaDocumento linea : lineasPendientes) {
-            sistema.agregarLineaDocumento(doc, linea.getItem(), linea.getCantidad(),
+            agregarLineaDocumento(doc, linea.getItem(), linea.getCantidad(),
                     linea.getPrecioUnitario(), linea.getAlicuotaIVA());
         }
         lineasPendientes.clear();
@@ -204,19 +209,19 @@ public class DocumentoComercialController {
         vista.seleccionarDocumento(numeroDocumento);
     }
 
-    private void aprobarDocumento() {
+    private void aprobarDocumentoDesdeVista() {
         DocumentoComercial doc = getDocumentoSeleccionado();
         if (doc == null || doc.getEstadoRegistro() != EstadoRegistroDocumento.OBSERVADO) {
             vista.mostrarMensaje("Seleccione un documento en estado OBSERVADO.", "Atención", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        Usuario usuario = sistema.getUsuarioLogueado();
+        Usuario usuario = LoginController.getUsuarioLogueado();
         if (usuario == null || !usuario.tienePermiso(Usuario.APROBAR_DOCUMENTO)) {
             vista.mostrarMensaje("No tiene permisos para aprobar documentos.\nSe requiere rol SUPERVISOR.",
                     "Permiso denegado", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        if (sistema.aprobarDocumento(doc, usuario)) {
+        if (aprobarDocumento(doc, usuario)) {
             vista.mostrarMensaje("Documento " + doc.getNumeroDocumento() + " APROBADO.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             cargarTabla();
             vista.seleccionarDocumento(doc.getNumeroDocumento());
@@ -256,12 +261,12 @@ public class DocumentoComercialController {
 
     private DocumentoComercial getDocumentoSeleccionado() {
         String numero = vista.getNumeroDocumentoSeleccionado();
-        return (numero != null) ? sistema.buscarDocumentoComercial(numero) : null;
+        return (numero != null) ? buscarDocumentoComercial(numero) : null;
     }
 
     private void cargarCombos() {
         List<ProveedorDTO> proveedores = new ArrayList<>();
-        for (Proveedor p : sistema.getProveedores()) {
+        for (Proveedor p : ProveedorController.getProveedores()) {
             if (p.isActivo()) {
                 proveedores.add(new ProveedorDTO(p.getCuit(), p.getRazonSocial(),
                         p.getCondicionImpositiva().toString(), p.getLimiteDeudaAutorizado(), p.isActivo()));
@@ -270,7 +275,7 @@ public class DocumentoComercialController {
         vista.cargarComboProveedores(proveedores);
 
         List<ItemDTO> items = new ArrayList<>();
-        for (Item i : sistema.getItems()) {
+        for (Item i : ItemController.getItems()) {
             if (i.isActivo()) {
                 items.add(new ItemDTO(i.getCodigo(), i.getDescripcion(), i.getTipoItem(),
                         i.getRubro() != null ? i.getRubro().getDescripcion() : "",
@@ -287,8 +292,8 @@ public class DocumentoComercialController {
         String cuit = vista.getCuitProveedorSeleccionado();
         List<String> numeros = new ArrayList<>();
         if (cuit != null) {
-            Proveedor p = sistema.buscarProveedorPorCuit(cuit);
-            for (Factura f : sistema.getFacturas(p)) {
+            Proveedor p = ProveedorController.buscarProveedorPorCuit(cuit);
+            for (Factura f : getFacturas(p)) {
                 numeros.add(f.getNumeroDocumento());
             }
         }
@@ -297,7 +302,7 @@ public class DocumentoComercialController {
 
     private void cargarTabla() {
         List<DocumentoComercialDTO> dtos = new ArrayList<>();
-        for (DocumentoComercial doc : sistema.getDocumentosComerciales()) {
+        for (DocumentoComercial doc : getDocumentosComerciales()) {
             dtos.add(new DocumentoComercialDTO(
                     doc.getNumeroDocumento(),
                     doc.getTipoDocumento(),
@@ -310,5 +315,122 @@ public class DocumentoComercialController {
             ));
         }
         vista.actualizarTabla(dtos);
+    }
+
+    // ============================================================
+    // LÓGICA DE NEGOCIO DEL MÓDULO (antes en SistemaCompras)
+    // ============================================================
+    public static Factura registrarFactura(Proveedor proveedor, String numeroDoc, LocalDate fecha, double importe,
+                                           String cae, LocalDate fechaCae, double baseIVA, double montoIVA) {
+        Factura factura = new Factura(contadorIdDocumentos++, numeroDoc, fecha, importe, proveedor,
+                cae, fechaCae, baseIVA, montoIVA);
+        documentosComerciales.add(factura);
+        return factura;
+    }
+
+    public static NotaDeDebito registrarNotaDeDebito(Proveedor proveedor, String numeroDoc, LocalDate fecha, double importe,
+                                                     String motivo, Factura facturaOrigen) {
+        NotaDeDebito nota = new NotaDeDebito(contadorIdDocumentos++, numeroDoc, fecha, importe, proveedor,
+                motivo, facturaOrigen);
+        documentosComerciales.add(nota);
+        return nota;
+    }
+
+    public static NotaDeCredito registrarNotaDeCredito(Proveedor proveedor, String numeroDoc, LocalDate fecha, double importe,
+                                                       String motivo, Factura facturaOrigen) {
+        NotaDeCredito nota = new NotaDeCredito(contadorIdDocumentos++, numeroDoc, fecha, importe, proveedor,
+                motivo, facturaOrigen);
+        documentosComerciales.add(nota);
+        return nota;
+    }
+
+    public static void agregarLineaDocumento(DocumentoComercial doc, Item item, double cantidad,
+                                             double precioUnitario, double alicuota) {
+        LineaDocumento linea = new LineaDocumento(doc.getLineas().size() + 1, item, cantidad, precioUnitario, alicuota);
+        doc.agregarLinea(linea);
+    }
+
+    // Validación de amparo con OC + control de precios: el módulo de OC aporta
+    // las órdenes del proveedor y se delega la regla en el propio documento
+    public static EstadoRegistroDocumento validarDocumentoConOC(DocumentoComercial doc) {
+        return doc.validarContraOC(OrdenDeCompraController.getOrdenesDeCompra(doc.getProveedor()));
+    }
+
+    public static boolean aprobarDocumento(DocumentoComercial doc, Usuario supervisor) {
+        return doc.aprobar(supervisor);
+    }
+
+    public static DocumentoComercial buscarDocumentoComercial(String numeroDocumento) {
+        for (DocumentoComercial doc : documentosComerciales) {
+            if (doc.getNumeroDocumento().equalsIgnoreCase(numeroDocumento)) {
+                return doc;
+            }
+        }
+        return null;
+    }
+
+    public static List<Factura> getFacturas(Proveedor proveedor) {
+        List<Factura> resultado = new ArrayList<>();
+        for (DocumentoComercial doc : documentosComerciales) {
+            if (doc instanceof Factura && doc.getProveedor() == proveedor) {
+                resultado.add((Factura) doc);
+            }
+        }
+        return resultado;
+    }
+
+    public static List<DocumentoComercial> getDocumentosComerciales() {
+        return documentosComerciales;
+    }
+
+    public static List<DocumentoComercial> getDocumentosComerciales(Proveedor proveedor) {
+        List<DocumentoComercial> resultado = new ArrayList<>();
+        for (DocumentoComercial doc : documentosComerciales) {
+            if (doc.getProveedor() == proveedor) {
+                resultado.add(doc);
+            }
+        }
+        return resultado;
+    }
+
+    // Documentos del proveedor que se pueden pagar: facturas y notas de débito
+    // con saldo pendiente. Se excluyen las notas de crédito (no se "pagan")
+    // y los documentos OBSERVADOS (requieren aprobación de un supervisor antes)
+    public static List<DocumentoComercial> getDocumentosPendientes(Proveedor proveedor) {
+        List<DocumentoComercial> resultado = new ArrayList<>();
+        for (DocumentoComercial doc : documentosComerciales) {
+            boolean esPagable = !doc.getTipoDocumento().equals("NOTA_DE_CREDITO");
+            boolean tieneSaldo = !doc.estaCancelado() && doc.getSaldoPendiente() > 0;
+            boolean noObservado = doc.getEstadoRegistro() != EstadoRegistroDocumento.OBSERVADO;
+            if (doc.getProveedor() == proveedor && esPagable && tieneSaldo && noObservado) {
+                resultado.add(doc);
+            }
+        }
+        return resultado;
+    }
+
+    public static List<DocumentoComercial> getDocumentosPendientes(Proveedor proveedor, int diasMinimosAntiguedad) {
+        List<DocumentoComercial> resultado = new ArrayList<>();
+        LocalDate fechaLimite = LocalDate.now().minusDays(diasMinimosAntiguedad);
+        for (DocumentoComercial doc : getDocumentosPendientes(proveedor)) {
+            if (!doc.getFechaEmision().isAfter(fechaLimite)) {
+                resultado.add(doc);
+            }
+        }
+        return resultado;
+    }
+
+    // Consulta por período; null significa "sin filtro"
+    public static List<DocumentoComercial> getDocumentosPorPeriodo(LocalDate desde, LocalDate hasta, Proveedor proveedorFiltro) {
+        List<DocumentoComercial> resultado = new ArrayList<>();
+        for (DocumentoComercial doc : documentosComerciales) {
+            boolean cumpleDesde = (desde == null) || !doc.getFechaEmision().isBefore(desde);
+            boolean cumpleHasta = (hasta == null) || !doc.getFechaEmision().isAfter(hasta);
+            boolean cumpleProveedor = (proveedorFiltro == null) || doc.getProveedor() == proveedorFiltro;
+            if (cumpleDesde && cumpleHasta && cumpleProveedor) {
+                resultado.add(doc);
+            }
+        }
+        return resultado;
     }
 }

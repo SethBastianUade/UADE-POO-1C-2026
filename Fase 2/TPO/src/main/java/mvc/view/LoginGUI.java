@@ -64,4 +64,13 @@ public class LoginGUI extends JFrame{
     public void mostrarMensaje(String mensaje, String titulo, int tipo) {
         JOptionPane.showMessageDialog(this, mensaje, titulo, tipo);
     }
+
+    // Tras un login exitoso, el controller pide abrir la ventana principal:
+    // la creación de vistas es responsabilidad de la capa de vista
+    public void abrirVentanaPrincipal(String titulo) {
+        dispose();
+        mvc.Menu.VentanaPrincipal ventanaPrincipal = new mvc.Menu.VentanaPrincipal();
+        ventanaPrincipal.setTitle(titulo);
+        ventanaPrincipal.setVisible(true);
+    }
 }

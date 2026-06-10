@@ -6,10 +6,8 @@ import java.awt.*;
 
 public class Menu {
     public static class VentanaPrincipal extends JFrame {
-
         private JDesktopPane escritorio;
 
-        
         public VentanaPrincipal() {
 
             setTitle("Sistema de Gestión Integral de Compras");
@@ -136,22 +134,17 @@ public class Menu {
         }
 
         public static void main(String[] args) {
-            
-            // Hilo seguro de Swing
-            SwingUtilities.invokeLater(() -> {
-                new VentanaPrincipal().setVisible(true);
-            });
+            // Carga inicial de datos (comentar esta línea para arrancar el sistema vacío)
+            DatosDePrueba.cargar();
 
+            // Hilo seguro de Swing: mostramos sólo la ventana de Login al iniciar.
             SwingUtilities.invokeLater(() -> {
-            // 1. Instanciamos la Vista del Login
-            LoginGUI vistaLogin = new LoginGUI();
-            
-            // 3. Hacemos visible el Login
-            vistaLogin.setVisible(true);
-        });
+                // 1. Instanciamos la Vista del Login
+                LoginGUI vistaLogin = new LoginGUI();
+
+                // 2. Hacemos visible el Login
+                vistaLogin.setVisible(true);
+            });
         }
     }
 }
-
-
-

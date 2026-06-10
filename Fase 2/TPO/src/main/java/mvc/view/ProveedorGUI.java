@@ -156,5 +156,20 @@ public class ProveedorGUI extends JInternalFrame{
             });
         }
     }
-    
+
+    // --- Apertura de diálogos hijos ---
+    // La creación de vistas es responsabilidad de la capa de vista:
+    // el controller solo decide cuándo abrirlas
+    public void abrirDialogoAsociarRubros(String cuit, String razonSocial) {
+        new AsociarProveedorRubroGUI(null, cuit, razonSocial).setVisible(true);
+    }
+
+    public void abrirDialogoCertificados(String cuit, String razonSocial) {
+        new CertificadosProveedorGUI(null, cuit, razonSocial).setVisible(true);
+    }
+
+    public void abrirDialogoPreciosAcordados(String cuit, String razonSocial) {
+        new PreciosAcordadosGUI(null, cuit, razonSocial).setVisible(true);
+    }
+
 }

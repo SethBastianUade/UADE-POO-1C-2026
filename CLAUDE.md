@@ -25,8 +25,7 @@ TPO (Trabajo Práctico Obligatorio) de la materia **Programación Orientada a Ob
 ```
 Fase 2/TPO/src/main/java/mvc/
 ├── Menu.java                        ← Punto de entrada / ventana principal (JDesktopPane)
-├── model/                           ← Capa de dominio
-│   ├── SistemaCompras.java          ← Singleton, fachada de negocio
+├── model/                           ← Capa de dominio (entidades + reglas de negocio)
 │   ├── Item.java                    ← Abstracta
 │   ├── Producto.java
 │   ├── Servicio.java
@@ -57,16 +56,18 @@ Fase 2/TPO/src/main/java/mvc/
 │   ├── CondicionImpositiva.java     ← RESPONSABLE_INSCRIPTO, MONOTRIBUTISTA, EXENTO, NO_CATEGORIZADO
 │   ├── RolUsuario.java              ← OPERADOR, SUPERVISOR
 │   └── TipoImpuesto.java            ← IVA, GANANCIAS, IIBB
-├── controller/
-│   ├── LoginController.java
-│   ├── RubroController.java
-│   ├── ItemController.java
-│   ├── ProveedorController.java
+├── controller/                      ← Cada controller de módulo es dueño de sus datos y su negocio
+│   ├── DatosDePrueba.java           ← Carga inicial de datos (invocada desde el main)
+│   ├── LoginController.java         ← usuarios + usuarioLogueado
+│   ├── RubroController.java         ← rubros
+│   ├── ItemController.java          ← items
+│   ├── ProveedorController.java     ← proveedores
+│   ├── AsociarProveedorRubroController.java
 │   ├── CertificadoController.java
 │   ├── PreciosAcordadosController.java
-│   ├── OrdenDeCompraController.java          ← Parte 2
-│   ├── DocumentoComercialController.java     ← Parte 3
-│   ├── OrdenDePagoController.java            ← Parte 4
+│   ├── OrdenDeCompraController.java          ← Parte 2: ordenesDeCompra
+│   ├── DocumentoComercialController.java     ← Parte 3: documentosComerciales
+│   ├── OrdenDePagoController.java            ← Parte 4: ordenesDePago
 │   ├── ConsultaDocumentosController.java     ← Parte 5
 │   ├── CuentaCorrienteController.java        ← Parte 5
 │   ├── SeguimientoComprasController.java     ← Parte 5
@@ -102,19 +103,43 @@ Fase 2/TPO/src/main/java/mvc/
 
 ---
 
-## 3. Arquitectura: Patrón MVC + Singleton
+## 3. Arquitectura: MVC con controllers de módulo
 
-El proyecto usa **MVC estricto** + **Singleton** para el modelo:
+El proyecto usa **MVC estricto**. No existe una fachada central (`SistemaCompras` fue
+eliminada): cada **controller de módulo** es dueño de los datos de su módulo y de los
+métodos de negocio que los operan.
 
 ```
-View (Swing GUI)  →  Controller  →  Model (SistemaCompras.getInstance())
-                  ←  DTO         ←
+View (Swing GUI)  →  Controller del módulo  →  Model (entidades de dominio)
+                  ←  DTO                    ←
 ```
 
-- **Vista** nunca accede directamente al modelo. Recibe DTOs.
-- **Controller** hace de intermediario: lee datos de la vista, llama a `SistemaCompras`, convierte a DTOs para la vista.
-- **SistemaCompras** es el Singleton que actúa como fachada: tiene las listas en memoria y los métodos de negocio.
+- **Vista** nunca accede directamente al modelo. Recibe DTOs. Las vistas se instancian
+  **solo desde la capa de vista** (Menu, GUIs padre); nunca desde un controller.
+- **Controller** tiene dos partes: (a) instancia por GUI que suscribe eventos y arma DTOs,
+  y (b) los **datos del módulo + métodos de negocio como `static`**, compartidos por toda
+  la app (las listas en memoria simulan la base de datos). Cuando un controller necesita
+  datos de otro módulo, llama a los métodos `static` del controller dueño
+  (p. ej. `OrdenDeCompraController.confirmarOrdenDeCompra` usa
+  `ProveedorController.calcularDeudaProveedor`).
+- **Modelo**: las reglas de negocio viven en las entidades dueñas del dato
+  (`OrdenDeCompra.confirmar`, `Proveedor.calcularRetenciones`, `DocumentoComercial.validarContraOC`);
+  el controller solo orquesta.
 - **DTOs** son objetos planos (sin lógica) para transferir datos entre capa controller y vista.
+
+Propiedad de los datos por módulo:
+
+| Controller | Datos que posee |
+|---|---|
+| `LoginController` | `usuarios`, `usuarioLogueado` |
+| `RubroController` | `rubros` |
+| `ItemController` | `items` |
+| `ProveedorController` | `proveedores` (con certificados y precios acordados dentro de cada `Proveedor`) |
+| `OrdenDeCompraController` | `ordenesDeCompra` |
+| `DocumentoComercialController` | `documentosComerciales` |
+| `OrdenDePagoController` | `ordenesDePago` |
+
+Los controllers de consulta (Parte 5) no poseen datos: leen de los controllers dueños.
 
 ---
 
@@ -123,7 +148,7 @@ View (Swing GUI)  →  Controller  →  Model (SistemaCompras.getInstance())
 ### ✅ Implementado y funcionando (TPO completo, compila sin errores):
 
 **Base (Parte 1):**
-- Login con autenticación (usuarios hardcodeados en `SistemaCompras`)
+- Login con autenticación (usuarios hardcodeados en `LoginController`)
 - CRUD de Rubros, Items (Producto/Servicio con CardLayout), Proveedores
 - Asociar/desasociar Rubros a un Proveedor
 - Certificados de Exclusión por Proveedor
@@ -150,11 +175,21 @@ View (Swing GUI)  →  Controller  →  Model (SistemaCompras.getInstance())
 **Consultas y Reportes (Parte 5):**
 - Trazabilidad documental, Cuenta corriente, Seguimiento de compras/pagos,
   Comparación de precios, Reportes fiscales (retenciones + Libro IVA)
-- Datos de prueba precargados (`SistemaCompras.cargarDatosDePrueba()`)
+- Datos de prueba precargados (`DatosDePrueba.cargar()`, invocado desde el `main` de `Menu`)
+
+### 🔄 Refactor MVC (sin SistemaCompras):
+- Se eliminó la fachada Singleton `SistemaCompras`: sus listas y métodos de negocio se
+  distribuyeron en los controllers de cada módulo como miembros `static` (ver §3).
+- Los controllers ya no instancian vistas: los diálogos de Proveedor los abre `ProveedorGUI`,
+  el diálogo de rubros tiene su propio `AsociarProveedorRubroController`, y la
+  `VentanaPrincipal` post-login la abre `LoginGUI.abrirVentanaPrincipal(titulo)`.
+- La carga de datos de prueba vive en `controller/DatosDePrueba.java`.
 
 ### 🐛 Bugs corregidos:
 - `CertificadoController.java`: `CertificadosController(...)` (método con typo) ahora es el
   constructor real `CertificadoController(vista)` y `CertificadosProveedorGUI` lo instancia con `this`.
+- `Proveedor`: el constructor pisaba `nombreComercial`, `domicilio`, `nroInscripcionIIBB` y
+  `fechaInicioActividades` con valores por defecto, descartando los parámetros recibidos.
 
 ### 📐 Decisiones de diseño a confirmar con la cátedra:
 - **Firma de `calcularDeudaActual(List<DocumentoComercial>)`**: recibe la lista por parámetro
@@ -170,51 +205,48 @@ View (Swing GUI)  →  Controller  →  Model (SistemaCompras.getInstance())
 
 ## 5. Modelo de Dominio — Clases Clave
 
-### SistemaCompras (Singleton)
+### Métodos de negocio por controller (todos `static`)
 ```java
-// Listas en memoria (base de datos simulada)
-List<OrdenDeCompra> ordenesDeCompra
-List<Proveedor> proveedores
-List<DocumentoComercial> documentosComerciales
-List<OrdenDePago> ordenesDePago
-List<Usuario> usuarios
-List<Item> items
-List<Rubro> rubros
-Usuario usuarioLogueado
-
-// Métodos base (Parte 1):
+// LoginController — posee List<Usuario> usuarios + Usuario usuarioLogueado
 autenticarUsuario(user, pass) → Usuario
-agregarRubro / buscarRubro / modificarRubro / cambiarEstadoRubro
+getUsuarioLogueado() / buscarUsuario(nombreUsuario)
+
+// RubroController — posee List<Rubro> rubros
+agregarRubro / buscarRubro / modificarRubro / cambiarEstadoRubro / getRubros
+
+// ItemController — posee List<Item> items
 agregarProducto / agregarServicio / getItems / buscarItemPorCodigo
+
+// ProveedorController — posee List<Proveedor> proveedores
 agregarProveedor / buscarProveedorPorCuit / modificarProveedor / cambiarEstadoProveedor
 asignarRubroAProveedor / desvincularRubroDeProveedor
-agregarCertificadoAProveedor / registrarPrecioAcordado
-calcularDeudaProveedor(p)   // delega en Proveedor.calcularDeudaActual(docs)
+agregarCertificadoAProveedor / registrarPrecioAcordado / getProveedores
+getProveedoresQueSuministran(item)
+calcularDeudaProveedor(p)   // delega en Proveedor.calcularDeudaActual(docs del módulo Documentos)
 
-// Órdenes de Compra (Parte 2):
+// OrdenDeCompraController — posee List<OrdenDeCompra> ordenesDeCompra (Parte 2)
 crearOrdenDeCompra(prov, fechaEntrega, operador) / agregarLineaOC / buscarOrdenDeCompra
 confirmarOrdenDeCompra(oc) → EstadoOrdenCompra   // control de límite de crédito
 aprobarOrdenDeCompra(oc, supervisor) / cancelarOrdenDeCompra(oc)
 getOrdenesDeCompra() / getOrdenesDeCompra(p)
+buscarOrdenesDeCompra(estado, rubro, prov)       // consultas Parte 5
 
-// Documentos Comerciales (Parte 3):
+// DocumentoComercialController — posee List<DocumentoComercial> documentosComerciales (Parte 3)
 registrarFactura / registrarNotaDeDebito / registrarNotaDeCredito
 agregarLineaDocumento / buscarDocumentoComercial / getFacturas(p)
 validarDocumentoConOC(doc) → EstadoRegistroDocumento   // amparo OC + control de precios
 aprobarDocumento(doc, supervisor)
 getDocumentosComerciales() / getDocumentosComerciales(p)
+getDocumentosPendientes(p) / getDocumentosPendientes(p, diasAntiguedad)
+getDocumentosPorPeriodo(desde, hasta, prov)      // consultas Parte 5
 
-// Órdenes de Pago (Parte 4):
-getDocumentosPendientes(p) / calcularRetenciones(p, monto) → List<Retencion>
+// OrdenDePagoController — posee List<OrdenDePago> ordenesDePago (Parte 4)
+calcularRetenciones(p, monto) → List<Retencion>  // delega en Proveedor.calcularRetenciones
 emitirOrdenDePago(prov, documentosPago, mediosPago, operador) → OrdenDePago
 getOrdenesDePago() / getOrdenesDePago(p)
+buscarOrdenesDePago(desde, hasta, tipoMedio, prov) / getRetencionesPorPeriodo(desde, hasta)
 
-// Consultas (Parte 5):
-getDocumentosPorPeriodo(desde, hasta, prov) / getDocumentosPendientes(p, diasAntiguedad)
-buscarOrdenesDeCompra(estado, rubro, prov) / buscarOrdenesDePago(desde, hasta, tipoMedio, prov)
-getProveedoresQueSuministran(item) / getRetencionesPorPeriodo(desde, hasta)
-
-// Datos de prueba: cargarDatosDePrueba() (llamado desde el constructor)
+// DatosDePrueba — cargar() (invocado desde el main de Menu; idempotente)
 ```
 
 ### Herencia principal
@@ -388,26 +420,40 @@ public class EjemploGUI extends JInternalFrame {
 }
 ```
 
-**Controller:**
+**Controller (dueño de los datos de su módulo):**
 ```java
 public class EjemploController {
-    private EjemploGUI vista;
-    private SistemaCompras sistema;
+    // 1. Datos del módulo — static para que toda la app comparta las mismas listas
+    private static final List<Ejemplo> ejemplos = new ArrayList<>();
+    private static int contadorIdEjemplos = 1;
 
-    // Constructor: obtiene instancia del sistema y suscribe todos los eventos
+    // 2. Vista asociada a esta instancia
+    private EjemploGUI vista;
+
+    // 3. Constructor: suscribe todos los eventos de la GUI
     public EjemploController(EjemploGUI vista) {
         this.vista = vista;
-        this.sistema = SistemaCompras.getInstance();
         this.vista.getBtnGuardar().addActionListener(e -> guardar());
         // ... resto de suscripciones
         cargarTabla();  // poblar la tabla al abrir
     }
 
-    // Métodos privados: uno por acción de negocio
-    private void guardar() { ... }
-    private void cargarTabla() { ... }
+    // 4. Métodos privados de la GUI: uno por acción
+    private void guardar() { ... }       // valida, llama a los métodos static, refresca
+    private void cargarTabla() { ... }   // convierte modelo → DTO y actualiza la vista
+
+    // ============================================================
+    // LÓGICA DE NEGOCIO DEL MÓDULO (static, compartida)
+    // ============================================================
+    public static void agregarEjemplo(...) { ... }
+    public static Ejemplo buscarEjemplo(String codigo) { ... }
+    public static List<Ejemplo> getEjemplos() { return ejemplos; }
 }
 ```
+> Si el controller necesita datos de otro módulo, llama al `static` del controller dueño
+> (p. ej. `ProveedorController.buscarProveedorPorCuit(cuit)`), nunca duplica la lista.
+> Los controllers **no instancian vistas**: si hay que abrir un diálogo, se le pide a la
+> vista (`vista.abrirDialogoX(...)`) y el diálogo instancia su propio controller.
 
 ### 7.4 Tabla en GUIs — patrón estándar
 
@@ -433,22 +479,20 @@ public void actualizarTabla(List<EjemploDTO> lista) {
 }
 ```
 
-### 7.5 Métodos en SistemaCompras — secciones comentadas
+### 7.5 Métodos de negocio en los controllers — secciones comentadas
 
-Cada integrante agrega sus métodos dentro de una sección marcada para evitar conflictos de merge:
+Los métodos de negocio de cada módulo viven en **su propio controller**, en una sección
+marcada al final de la clase (después de los métodos de GUI):
 
 ```java
+// En OrdenDeCompraController.java
 // ============================================================
-// MÓDULO: ÓRDENES DE COMPRA (Integrante B)
+// LÓGICA DE NEGOCIO DEL MÓDULO (antes en SistemaCompras)
 // ============================================================
-public void crearOrdenDeCompra(...) { ... }
-public EstadoOrdenCompra confirmarOrdenDeCompra(...) { ... }
-
-// ============================================================
-// MÓDULO: DOCUMENTOS COMERCIALES (Integrante C)
-// ============================================================
-public Factura registrarFactura(...) { ... }
+public static OrdenDeCompra crearOrdenDeCompra(...) { ... }
+public static EstadoOrdenCompra confirmarOrdenDeCompra(...) { ... }
 ```
+Cada integrante trabaja en el controller de su módulo, lo que evita conflictos de merge.
 
 ### 7.6 Validaciones en controllers
 
@@ -463,12 +507,12 @@ private void guardar() {
         return;
     }
     // 2. Validar reglas de negocio (duplicados, límites, etc.)
-    if (sistema.buscarX(valor) != null) {
+    if (buscarX(valor) != null) {  // static del propio controller (u OtroController.buscarY si el dato es ajeno)
         vista.mostrarMensaje("Ya existe un registro con ese valor.", "Error", JOptionPane.ERROR_MESSAGE);
         return;
     }
     // 3. Ejecutar la operación
-    sistema.agregarX(valor);
+    agregarX(valor);
     // 4. Feedback + limpiar + refrescar tabla
     vista.limpiarFormulario();
     vista.mostrarMensaje("Guardado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
@@ -484,9 +528,10 @@ Siempre en este orden:
 1. model/     → agregar/modificar clases de dominio si hace falta
 2. dto/       → crear XDTO con los campos que necesita la tabla
 3. view/      → crear XGUI extends JInternalFrame
-4. controller/→ crear XController (se instancia desde XGUI)
-5. SistemaCompras.java → agregar métodos en la sección del módulo
-6. Menu.java  → agregar JMenuItem que abra la XGUI
+4. controller/→ crear XController (se instancia desde XGUI); si el módulo posee datos,
+                declararlos static en el controller junto con sus métodos de negocio
+5. Menu.java  → agregar JMenuItem que abra la XGUI
+6. DatosDePrueba.java → agregar datos de ejemplo del módulo si corresponde
 ```
 
 ---
@@ -502,7 +547,8 @@ Siempre en este orden:
   - `DocumentoComercial.getTipoDocumento()` → "FACTURA" / "NOTA_DE_DEBITO" / "NOTA_DE_CREDITO"
   - `DocumentoComercial.getImpactoDeuda()` → +saldo; `NotaDeCredito` lo sobrescribe con −saldo
   - `MedioDePago.getTipo()` → "EFECTIVO" / "TRANSFERENCIA_BANCARIA" / etc.
-- **No God Class:** SistemaCompras es fachada/singleton válido en Fase 2, pero la lógica debe estar en las clases dueñas de los datos
+- **No God Class:** no hay fachada central; cada controller posee solo los datos de su
+  módulo, y las reglas de negocio viven en las clases del modelo dueñas del dato
 
 ---
 
@@ -511,8 +557,10 @@ Siempre en este orden:
 - Responder siempre en **español**
 - Trabajar **paso a paso**, confirmando cada artefacto antes del siguiente
 - Cuando se agregue un nuevo módulo, seguir el patrón: model → dto → view → controller → Menu.java
-- Respetar el patrón MVC: la **vista no accede al modelo directamente**, siempre a través del controller
-- Si hay que agregar lógica de negocio compleja, implementarla en la clase del modelo que "posee" el dato, no en el controller ni en SistemaCompras directamente
+- Respetar el patrón MVC: la **vista no accede al modelo directamente**, siempre a través del controller;
+  y el **controller no instancia vistas** (los diálogos los abre la vista)
+- Si hay que agregar lógica de negocio compleja, implementarla en la clase del modelo que "posee" el dato;
+  el controller solo orquesta y mantiene las listas de su módulo
 - Ante dudas de diseño, priorizar **alta cohesión** sobre conveniencia
 - Justificar decisiones en términos de los principios OO de la cátedra cuando corresponda
 
@@ -534,9 +582,13 @@ Estructura: `Fase I/` (UML) y `Fase 2/TPO/` (código Java)
 El proyecto es Java puro. No hay PATH global de `javac`; usar el JDK de IntelliJ:
 
 ```powershell
-# JDK disponible en la máquina: C:\Users\feder\.jdks\openjdk-24.0.1\bin
-$javac = "C:\Users\feder\.jdks\openjdk-24.0.1\bin\javac.exe"
-$java  = "C:\Users\feder\.jdks\openjdk-24.0.1\bin\java.exe"
+# El JDK de IntelliJ vive en ~\.jdks (la versión varía según la máquina:
+# p. ej. openjdk-24.0.1 u openjdk-25). Tomamos el primero que tenga javac:
+$jdk   = Get-ChildItem "$env:USERPROFILE\.jdks" -Directory |
+         Where-Object { Test-Path "$($_.FullName)\bin\javac.exe" } |
+         Select-Object -First 1 -ExpandProperty FullName
+$javac = "$jdk\bin\javac.exe"
+$java  = "$jdk\bin\java.exe"
 $src   = "Fase 2\TPO\src\main\java"
 $out   = "$env:TEMP\poo_build"
 
@@ -557,8 +609,10 @@ $files = Get-ChildItem $src -Recurse -Filter *.java | Select-Object -ExpandPrope
   ```java
   public class TestX {
       public static void main(String[] args) {
-          SistemaCompras s = SistemaCompras.getInstance();
-          // armar escenario con los métodos de negocio reales y verificar con asserts manuales
+          DatosDePrueba.cargar(); // mismo estado inicial que la app
+          // armar escenarios con los métodos static de los controllers
+          // (ProveedorController.agregarProveedor, OrdenDeCompraController.confirmarOrdenDeCompra, etc.)
+          // y verificar con asserts manuales
       }
   }
   ```
@@ -594,5 +648,5 @@ $files = Get-ChildItem $src -Recurse -Filter *.java | Select-Object -ExpandPrope
 - [ ] `Producto` tiene control de stock (`stockActual`/`stockMinimo`) que no se descuenta al recibir.
 - [ ] Validar duplicados de N° de OC/OP igual que se hace con documentos (hoy la numeración es
       autoincremental, así que no colisiona, pero no hay chequeo si se cargan a mano).
-- [ ] `cargarDatosDePrueba()` se ejecuta siempre: comentar esa línea del constructor de
-      `SistemaCompras` para la entrega final o para demostrar el sistema vacío.
+- [ ] `DatosDePrueba.cargar()` se ejecuta siempre: comentar esa línea en el `main` de
+      `Menu.VentanaPrincipal` para la entrega final o para demostrar el sistema vacío.

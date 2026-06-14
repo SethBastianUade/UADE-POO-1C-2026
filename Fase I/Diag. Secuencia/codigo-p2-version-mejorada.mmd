@@ -1,0 +1,68 @@
+sequenceDiagram
+    autonumber
+    actor Operador as Operador (Usuario)
+    participant Sistema as SistemadeGestiónIntegraldeCompras
+    participant Prov as p: Proveedor
+    participant OC as oc: OrdenDeCompra
+    participant F as f: Factura
+    actor Supervisor as Supervisor (Usuario)
+
+    %% Inicio
+    Operador->>Sistema: registrarFactura(datos, nroOC)
+    activate Sistema
+
+    Sistema->>F: <<create>>(datos)
+    activate F
+    note right of F: Estado inicial: INGRESADO
+    F-->>Sistema: f
+    deactivate F
+
+    %% 1. Validación de Origen (Regla 1)
+    alt No se provee o no existe OC
+        Sistema-->>Supervisor: solicitarAutorizacionExcepcion(f)
+        Supervisor->>Sistema: autorizarRegistroSinOC(f, supervisor)
+        Sistema->>F: setEstadoRegistro(EstadoRegistroDocumento.APROBADO)
+        activate F
+        F-->>Sistema: void
+        deactivate F
+    else OC encontrada
+        Sistema->>Sistema: validarFacturaConOC(f, oc)
+    end
+
+    %% 2. Control de Coherencia de Conceptos (Regla 3)
+    Sistema->>Sistema: validarCoherenciaItemsFactura(f, p)
+    activate Sistema
+    Sistema-->>Sistema: itemsCongruentes = true
+    deactivate Sistema
+
+    %% 3. Control de Precios e Importes (Regla 2)
+    Sistema->>Sistema: validarPreciosFactura(f, oc)
+    activate Sistema
+    Sistema-->>Sistema: coinciden (boolean)
+    deactivate Sistema
+
+    alt coinciden == false
+        Sistema->>F: setEstadoRegistro(EstadoRegistroDocumento.OBSERVADO)
+        activate F
+        F-->>Sistema: void
+        deactivate F
+        
+        %% Intervención del Supervisor por diferencia de precios
+        Sistema-->>Supervisor: notificarObservacion(f)
+        Supervisor->>Sistema: aprobarFacturaObservada(f, supervisor)
+        
+        Sistema->>F: setEstadoRegistro(EstadoRegistroDocumento.APROBADO)
+        activate F
+        F-->>Sistema: void
+        deactivate F
+        
+    else coinciden == true
+        Sistema->>F: setEstadoRegistro(EstadoRegistroDocumento.APROBADO)
+        activate F
+        F-->>Sistema: void
+        deactivate F
+    end
+
+    %% Fin del proceso
+    Sistema-->>Operador: confirmarRegistroExitoso(f)
+    deactivate Sistema

@@ -1,0 +1,75 @@
+sequenceDiagram
+    autonumber
+    actor Operador as Operador (Usuario)
+    participant Sistema as SistemadeGestiónIntegraldeCompras
+    participant Prov as p: Proveedor
+    participant OC as oc: OrdenDeCompra
+    participant Linea as : LineaOC
+    actor Supervisor as Supervisor (Usuario)
+
+    %% 1. Inicio
+    Operador->>Sistema: iniciarCargaOC()
+    activate Sistema
+    Sistema->>OC: <<create>>
+    activate OC
+    OC-->>Sistema: oc (Estado: BORRADOR)
+    deactivate OC
+
+    %% 2. Carga de Ítems
+    loop Búsqueda y carga por cada Item
+        Operador->>Sistema: ingresarItem(item, cantidad)
+        Sistema->>Sistema: obtenerPrecioAcordado(oc, item)
+        Sistema->>Linea: <<create>>(cantidad, precioAcordado)
+        activate Linea
+        Linea-->>Sistema: linea
+        deactivate Linea
+        Sistema->>OC: [Asocia LineaOC a oc]
+    end
+
+    %% 3. Confirmación (Inicio de reglas de negocio)
+    Operador->>Sistema: confirmarOrden(oc, operador)
+    
+    Sistema->>OC: calcularTotal()
+    activate OC
+    OC-->>Sistema: montoNuevaOC
+    deactivate OC
+
+    %% 4. Validación de Crédito y Deuda
+    Sistema->>Sistema: superaLimiteCredito(p, montoNuevaOC)
+    activate Sistema
+    
+    Sistema->>Prov: calcularMontoComprometido(montoNuevaOC)
+    activate Prov
+    Prov->>Prov: calcularDeudaActual()
+    Prov-->>Sistema: montoComprometido
+    deactivate Prov
+    
+    Sistema-->>Sistema: superaLimite (boolean)
+    deactivate Sistema
+
+    %% 5. Evaluación de Reglas y Estados
+    alt superaLimite == false
+        Sistema->>OC: setEstado(EstadoOC.EMITIDA)
+        activate OC
+        OC-->>Sistema: void
+        deactivate OC
+        Sistema-->>Operador: Orden Emitida Exitosamente
+        
+    else superaLimite == true
+        Sistema->>OC: setEstado(EstadoOC.PENDIENTE_APROBACION)
+        activate OC
+        OC-->>Sistema: void
+        deactivate OC
+        Sistema-->>Operador: Orden Pendiente de Aprobación Superior
+        
+        %% 6. Intervención del Supervisor
+        Supervisor->>Sistema: aprobarSupervisorOrden(oc, supervisor)
+        activate Sistema
+        Sistema->>OC: setEstado(EstadoOC.EMITIDA)
+        activate OC
+        OC-->>Sistema: void
+        deactivate OC
+        Sistema-->>Supervisor: Orden Aprobada y Emitida
+        deactivate Sistema
+    end
+    deactivate Sistema

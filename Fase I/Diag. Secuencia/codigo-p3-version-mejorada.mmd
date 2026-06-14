@@ -1,0 +1,89 @@
+sequenceDiagram
+    autonumber
+    actor Operador as Operador (Usuario)
+    participant Sistema as SistemadeGestiónIntegraldeCompras
+    participant Prov as p: Proveedor
+    participant Cert as c: CertificadoExclusion
+    participant OP as op: OrdenDePago
+    participant Ret as r: Retencion
+    participant DocPago as dp: DocumentoPago
+    participant DocCom as dc: DocumentoComercial
+
+    Operador->>Sistema: iniciarCargaOP(idProveedor, documentos, mediosPago)
+    activate Sistema
+
+    Sistema->>OP: <<create>>
+    activate OP
+    OP-->>Sistema: op
+    deactivate OP
+
+    %% 1. Verificación de Certificados y Retenciones
+    loop Por cada TipoImpuesto aplicable
+        Sistema->>Sistema: tieneExclusionVigente(p, tipoImpuesto, fechaActual)
+        activate Sistema
+        
+        Sistema->>Prov: [Consultar certificados]
+        activate Prov
+        Prov->>Cert: estaVigente(fechaActual)
+        activate Cert
+        Cert-->>Prov: vigente (boolean)
+        deactivate Cert
+        Prov-->>Sistema: exclusionVigente
+        deactivate Prov
+        
+        Sistema-->>Sistema: exclusionVigente (boolean)
+        deactivate Sistema
+
+        alt exclusionVigente == false
+            Sistema->>Ret: <<create>>(tipoImpuesto)
+            activate Ret
+            Ret->>Ret: calcularMonto()
+            Ret-->>Sistema: r
+            deactivate Ret
+            Sistema->>OP: [Asocia Retencion a OrdenDePago]
+        end
+    end
+
+    %% 2. Cálculo de Totales de la OP
+    Sistema->>OP: calcularTotalBruto()
+    activate OP
+    OP-->>Sistema: totalBruto
+    deactivate OP
+
+    Sistema->>OP: calcularTotalRetenido()
+    activate OP
+    OP-->>Sistema: totalRetenido
+    deactivate OP
+
+    Sistema->>OP: calcularNeto()
+    activate OP
+    OP-->>Sistema: totalNeto
+    deactivate OP
+
+    %% 3. Confirmación, Actualización de Estados y Asientos
+    Operador->>Sistema: generarOrdenPago(op)
+    
+    Sistema->>Sistema: actualizarEstadosDocumentosOP(op)
+    activate Sistema
+    
+    loop Por cada DocumentoPago en la op
+        Sistema->>DocPago: getMontoAplicado()
+        activate DocPago
+        DocPago-->>Sistema: monto
+        deactivate DocPago
+        
+        Sistema->>DocCom: aplicarPago(monto)
+        activate DocCom
+        note right of DocCom: Actualiza EstadoCancelacionDocumento internamente
+        DocCom-->>Sistema: void
+        deactivate DocCom
+    end
+    
+    %% Generación de Asientos Contables (Regla de Negocio)
+    Sistema->>Sistema: [generarAsientosContables(op.Retenciones)]
+    
+    
+    deactivate Sistema
+
+    Sistema-->>Operador: Orden de Pago Emitida Exitosamente
+    deactivate Sistema

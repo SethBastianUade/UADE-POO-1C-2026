@@ -37,6 +37,25 @@ public abstract class DocumentoComercial {
 
     public double getSaldoPendiente() { return importeTotal - montoPagado; }
 
+    // Base imponible y monto de IVA discriminados, derivados de las líneas.
+    // Factura los sobrescribe con los importes sellados por AFIP; ND/NC los computan
+    // de sus líneas (antes figuraban con IVA $0 en el Libro IVA).
+    public double getBaseImponible() {
+        double base = 0.0;
+        for (LineaDocumento linea : lineas) {
+            base += linea.getSubtotal();
+        }
+        return base;
+    }
+
+    public double getMontoIVA() {
+        double iva = 0.0;
+        for (LineaDocumento linea : lineas) {
+            iva += linea.getSubtotal() * linea.getAlicuotaIVA() / 100;
+        }
+        return iva;
+    }
+
     // Cuánto aporta este documento a la deuda con el proveedor.
     // NotaDeCredito lo sobrescribe con signo negativo (un crédito resta deuda).
     public double getImpactoDeuda() { return getSaldoPendiente(); }
@@ -79,7 +98,10 @@ public abstract class DocumentoComercial {
                     break;
                 }
             }
-            if (!lineaAmparada) {
+            // Coherencia de conceptos (§2.4 paso 3): el ítem debe pertenecer a un rubro
+            // asociado al proveedor; si no, el documento queda OBSERVADO
+            boolean rubroCoherente = proveedor.getRubros().contains(linea.getItem().getRubro());
+            if (!lineaAmparada || !rubroCoherente) {
                 todoAmparado = false;
             }
         }

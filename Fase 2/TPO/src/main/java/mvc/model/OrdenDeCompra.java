@@ -100,10 +100,10 @@ public class OrdenDeCompra {
 
     public void evaluarYActualizarEstado() {
         boolean todasCompletas = lineas.stream().allMatch(LineaOrdenCompra::estaCompletamenteRecibida);
-        boolean algunaParcial = lineas.stream().anyMatch(l -> l.getCantidadPendiente() < l.getCantidad() && !l.estaCompletamenteRecibida());
+        boolean algunaRecibida = lineas.stream().anyMatch(l -> l.getCantidadRecibida() > 0);
         if (todasCompletas) {
             this.estado = EstadoOrdenCompra.CERRADA;
-        } else if (algunaParcial) {
+        } else if (algunaRecibida) {
             this.estado = EstadoOrdenCompra.RECIBIDA_PARCIALMENTE;
         }
     }

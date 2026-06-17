@@ -8,6 +8,7 @@ import mvc.enums.EstadoOrdenCompra;
 import mvc.model.Item;
 import mvc.model.LineaOrdenCompra;
 import mvc.model.OrdenDeCompra;
+import mvc.model.Producto;
 import mvc.model.Proveedor;
 import mvc.model.ProveedorItem;
 import mvc.model.Rubro;
@@ -320,6 +321,43 @@ public class OrdenDeCompraController {
             }
         }
         return resultado;
+    }
+
+    // OC que pueden recibir mercadería: emitidas o ya parcialmente recibidas
+    public static List<OrdenDeCompra> getOrdenesRecibibles() {
+        List<OrdenDeCompra> resultado = new ArrayList<>();
+        for (OrdenDeCompra oc : ordenesDeCompra) {
+            if (oc.getEstado() == EstadoOrdenCompra.EMITIDA
+                    || oc.getEstado() == EstadoOrdenCompra.RECIBIDA_PARCIALMENTE) {
+                resultado.add(oc);
+            }
+        }
+        return resultado;
+    }
+
+    // Registra la recepción de una cantidad sobre una línea de la OC. Valida que la
+    // cantidad sea positiva y no supere lo pendiente; suma stock si el ítem es Producto;
+    // recalcula el estado de la OC (RECIBIDA_PARCIALMENTE / CERRADA).
+    public static boolean registrarRecepcion(OrdenDeCompra oc, int idLinea, double cantidad) {
+        if (oc == null || cantidad <= 0) {
+            return false;
+        }
+        LineaOrdenCompra linea = null;
+        for (LineaOrdenCompra l : oc.getLineas()) {
+            if (l.getIdLineaOrdenCompra() == idLinea) {
+                linea = l;
+                break;
+            }
+        }
+        if (linea == null || cantidad > linea.getCantidadPendiente()) {
+            return false;
+        }
+        linea.registrarRecepcion(cantidad);
+        if (linea.getItem() instanceof Producto) {
+            ((Producto) linea.getItem()).incrementarStock(cantidad);
+        }
+        oc.evaluarYActualizarEstado();
+        return true;
     }
 
     // Búsqueda con filtros para las consultas; null significa "sin filtro"

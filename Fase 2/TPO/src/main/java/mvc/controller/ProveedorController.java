@@ -63,6 +63,11 @@ public class ProveedorController {
                 return;
             }
 
+            if (!Proveedor.cuitEsValido(cuit)) {
+                vista.mostrarMensaje("El CUIT no es válido (formato o dígito verificador).", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             if (buscarProveedorPorCuit(cuit) != null) {
                 vista.mostrarMensaje("Ya existe un proveedor con este CUIT.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;

@@ -55,11 +55,31 @@ public class Proveedor {
 
         this.rubros = new ArrayList<>();
         this.certificados = new ArrayList<>();
+    }
 
-        this.nombreComercial = razonSocial; 
-        this.domicilio = "No especificado";
-        this.nroInscripcionIIBB = "Pendiente";
-        this.fechaInicioActividades = LocalDate.now();
+    // Valida formato y dígito verificador del CUIT (regla de §2.1 del enunciado).
+    // Acepta el CUIT con o sin guiones/espacios; debe quedar en 11 dígitos.
+    public static boolean cuitEsValido(String cuit) {
+        if (cuit == null) {
+            return false;
+        }
+        String soloDigitos = cuit.replaceAll("[^0-9]", "");
+        if (soloDigitos.length() != 11) {
+            return false;
+        }
+        int[] pesos = {5, 4, 3, 2, 7, 6, 5, 4, 3, 2};
+        int suma = 0;
+        for (int i = 0; i < 10; i++) {
+            suma += (soloDigitos.charAt(i) - '0') * pesos[i];
+        }
+        int resto = suma % 11;
+        int dv = 11 - resto;
+        if (dv == 11) {
+            dv = 0;
+        } else if (dv == 10) {
+            return false; // dígito verificador 10 no es válido
+        }
+        return dv == (soloDigitos.charAt(10) - '0');
     }
 
     // Métodos de negocio
@@ -111,7 +131,7 @@ public class Proveedor {
                 return (tipo == TipoImpuesto.IIBB) ? PORC_IIBB_MONOTRIBUTISTA : 0.0;
             case EXENTO:
                 return 0.0;
-            // RESPONSABLE_INSCRIPTO; a NO_CATEGORIZADO se le aplican las
+            // RESPONSABLE_INSCRIPTO; a CONSUMIDOR_FINAL se le aplican las
             // mismas alícuotas máximas (criterio conservador)
             default:
                 switch (tipo) {

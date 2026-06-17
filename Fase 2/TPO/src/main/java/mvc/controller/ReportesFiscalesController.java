@@ -4,7 +4,6 @@ import mvc.dto.LibroIVACompraDTO;
 import mvc.dto.TotalRetenidoDTO;
 import mvc.enums.TipoImpuesto;
 import mvc.model.DocumentoComercial;
-import mvc.model.Factura;
 import mvc.model.Retencion;
 import mvc.view.ReportesFiscalesGUI;
 
@@ -65,22 +64,12 @@ public class ReportesFiscalesController {
         double totalBase = 0, totalIVA = 0, totalGeneral = 0;
 
         for (DocumentoComercial doc : DocumentoComercialController.getDocumentosPorPeriodo(desde, hasta, null)) {
-            double base, iva, total;
-            if (doc instanceof Factura) {
-                Factura factura = (Factura) doc;
-                base = factura.getBaseImponibleIVA();
-                iva = factura.getMontoIVA();
-                total = factura.getImporteTotal();
-            } else if (doc.getTipoDocumento().equals("NOTA_DE_CREDITO")) {
-                // Las NC restan en el libro; el modelo no discrimina su IVA
-                base = -doc.getImporteTotal();
-                iva = 0;
-                total = -doc.getImporteTotal();
-            } else {
-                base = doc.getImporteTotal();
-                iva = 0;
-                total = doc.getImporteTotal();
-            }
+            // IVA discriminado polimórfico: factura usa su IVA sellado, ND/NC lo derivan
+            // de sus líneas. Las notas de crédito restan en el libro.
+            double signo = doc.getTipoDocumento().equals("NOTA_DE_CREDITO") ? -1 : 1;
+            double base = signo * doc.getBaseImponible();
+            double iva = signo * doc.getMontoIVA();
+            double total = signo * doc.getImporteTotal();
             dtos.add(new LibroIVACompraDTO(
                     doc.getFechaEmision().toString(), doc.getProveedor().getCuit(),
                     doc.getProveedor().getRazonSocial(), doc.getTipoDocumento(),

@@ -4,5 +4,5 @@ public enum CondicionImpositiva {
     RESPONSABLE_INSCRIPTO,
     MONOTRIBUTISTA,
     EXENTO,
-    NO_CATEGORIZADO
+    CONSUMIDOR_FINAL
 }

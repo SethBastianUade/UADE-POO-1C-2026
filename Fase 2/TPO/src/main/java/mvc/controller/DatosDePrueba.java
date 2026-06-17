@@ -87,9 +87,11 @@ public final class DatosDePrueba {
         DocumentoComercialController.agregarLineaDocumento(f2, ItemController.buscarItemPorCodigo("S001"), 1, 15000, 21);
         DocumentoComercialController.validarDocumentoConOC(f2);
 
-        // NC de p1 sobre la factura (resta deuda)
-        DocumentoComercialController.registrarNotaDeCredito(p1, "NC-0001-00000005", LocalDate.now().minusDays(2),
-                5875, "Descuento por pronto pago", f1);
+        // NC de p1 sobre la factura (resta deuda). Lleva una línea para que el
+        // Libro IVA discrimine su IVA: base 5000 + IVA 1050 (21%) = 6050.
+        mvc.model.NotaDeCredito nc1 = DocumentoComercialController.registrarNotaDeCredito(p1, "NC-0001-00000005",
+                LocalDate.now().minusDays(2), 6050, "Descuento por pronto pago", f1);
+        DocumentoComercialController.agregarLineaDocumento(nc1, ItemController.buscarItemPorCodigo("P001"), 1, 5000, 21);
 
         // OC de p2 que supera su límite de crédito (queda PENDIENTE_APROBACION)
         OrdenDeCompra oc2 = OrdenDeCompraController.crearOrdenDeCompra(p2, LocalDate.now().plusDays(5), admin);

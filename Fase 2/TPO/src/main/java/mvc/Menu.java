@@ -33,6 +33,7 @@ public class Menu {
             JMenuItem itemProductoServicio = new JMenuItem("Gestionar Productos/Servicios - Rubros");
             JMenuItem itemProveedor = new JMenuItem("Gestionar Proveedores");
             JMenuItem itemOrdenesCompra = new JMenuItem("Gestionar Órdenes de Compra");
+            JMenuItem itemRecepcion = new JMenuItem("Registrar Recepción de Mercadería");
             JMenuItem itemDocumentos = new JMenuItem("Gestionar Documentos Comerciales");
             JMenuItem itemOrdenesPago = new JMenuItem("Gestionar Órdenes de Pago");
             JMenuItem itemTrazabilidad = new JMenuItem("Trazabilidad Documental");
@@ -46,6 +47,7 @@ public class Menu {
             itemProductoServicio.addActionListener(e -> abrirVistaProductoServicio());
             itemProveedor.addActionListener(e -> abrirVistaProveedor());
             itemOrdenesCompra.addActionListener(e -> abrirVistaOrdenesCompra());
+            itemRecepcion.addActionListener(e -> abrirVista(new RecepcionMercaderiaGUI()));
             itemDocumentos.addActionListener(e -> abrirVistaDocumentos());
             itemOrdenesPago.addActionListener(e -> abrirVistaOrdenesPago());
             itemTrazabilidad.addActionListener(e -> abrirVista(new ConsultaDocumentosGUI()));
@@ -58,6 +60,7 @@ public class Menu {
             menuCatalogos.add(itemProductoServicio);
             menuProveedores.add(itemProveedor);
             menuCompras.add(itemOrdenesCompra);
+            menuCompras.add(itemRecepcion);
             menuFacturacionPagos.add(itemDocumentos);
             menuFacturacionPagos.add(itemOrdenesPago);
             menuConsultas.add(itemTrazabilidad);
